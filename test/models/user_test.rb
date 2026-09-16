@@ -104,4 +104,32 @@ class UserTest < ActiveSupport::TestCase
     assert user.update(name: "Ana Maria")
     assert_equal user, user.authenticate("clave-segura")
   end
+
+  test "has multiple households through memberships" do
+    @user.save!
+    first_household = Household.create!(name: "Casa")
+    second_household = Household.create!(name: "Otra casa")
+    first = @user.memberships.create!(household: first_household, role: "owner")
+    second = @user.memberships.create!(household: second_household)
+
+    assert_equal [ first, second ], @user.memberships.order(:id).to_a
+    assert_equal [ first_household, second_household ], @user.households.order(:id).to_a
+  end
+
+  test "destroying a user destroys memberships and preserves households and other memberships" do
+    @user.save!
+    household = Household.create!(name: "Casa")
+    other_user = User.create!(name: "Luis", email: "luis@example.com", password: "clave-segura")
+    membership = @user.memberships.create!(household: household)
+    other_membership = other_user.memberships.create!(household: household)
+
+    assert_difference "Membership.count", -1 do
+      @user.destroy!
+    end
+
+    assert_not Membership.exists?(membership.id)
+    assert Membership.exists?(other_membership.id)
+    assert Household.exists?(household.id)
+    assert User.exists?(other_user.id)
+  end
 end
