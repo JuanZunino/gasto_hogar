@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_16_222100) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_16_223000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -20,6 +20,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_222100) do
     t.string "name", null: false
     t.datetime "updated_at", null: false
     t.index [ "name" ], name: "index_categories_on_name", unique: true
+  end
+
+  create_table "expenses", force: :cascade do |t|
+    t.decimal "amount", precision: 12, scale: 2, null: false
+    t.bigint "category_id", null: false
+    t.datetime "created_at", null: false
+    t.date "date", null: false
+    t.string "description", null: false
+    t.bigint "household_id"
+    t.text "notes"
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index [ "category_id" ], name: "index_expenses_on_category_id"
+    t.index [ "household_id" ], name: "index_expenses_on_household_id"
+    t.index [ "user_id" ], name: "index_expenses_on_user_id"
   end
 
   create_table "households", force: :cascade do |t|
@@ -50,6 +65,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_222100) do
     t.index [ "email" ], name: "index_users_on_email", unique: true
   end
 
+  add_foreign_key "expenses", "categories"
+  add_foreign_key "expenses", "households"
+  add_foreign_key "expenses", "users"
   add_foreign_key "memberships", "households"
   add_foreign_key "memberships", "users"
 end
