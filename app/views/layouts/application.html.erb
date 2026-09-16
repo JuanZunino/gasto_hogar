@@ -24,6 +24,12 @@
   </head>
 
   <body>
+    <% if notice.present? %>
+      <p role="status"><%= notice %></p>
+    <% end %>
+    <% if alert.present? %>
+      <p role="alert"><%= alert %></p>
+    <% end %>
     <%= yield %>
   </body>
 </html>

@@ -1,0 +1,10 @@
+<h1><%= @category.name %></h1>
+
+<p><strong>Descripción:</strong> <%= @category.description.presence || "Sin descripción" %></p>
+
+<p>
+  <%= link_to "Editar", edit_admin_category_path(@category) %>
+  <%= link_to "Volver a categorías", admin_categories_path %>
+</p>
+<%= button_to "Eliminar", admin_category_path(@category), method: :delete,
+  form: { data: { turbo_confirm: "¿Eliminar esta categoría?" } } %>
