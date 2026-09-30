@@ -1,0 +1,15 @@
+<h1><%= @expense.description %></h1>
+
+<p><strong>Fecha:</strong> <%= @expense.date %></p>
+<p><strong>Importe:</strong> <%= number_with_precision(@expense.amount, precision: 2) %></p>
+<p><strong>Usuario:</strong> <%= @expense.user.name %></p>
+<p><strong>Categoría:</strong> <%= @expense.category.name %></p>
+<p><strong>Hogar:</strong> <%= @expense.household&.name || "Personal" %></p>
+<p><strong>Notas:</strong> <%= @expense.notes.presence || "Sin notas" %></p>
+
+<p>
+  <%= link_to "Editar", edit_admin_expense_path(@expense) %>
+  <%= link_to "Volver a gastos", admin_expenses_path %>
+</p>
+<%= button_to "Eliminar", admin_expense_path(@expense), method: :delete,
+  form: { data: { turbo_confirm: "¿Eliminar este gasto?" } } %>

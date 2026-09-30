@@ -1,0 +1,42 @@
+<%= form_with model: [:admin, expense] do |form| %>
+  <% if expense.errors.any? %>
+    <div role="alert">
+      <h2>No se pudo guardar el gasto:</h2>
+      <ul>
+        <% expense.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <p>
+    <%= form.label :description, "Descripción" %><br>
+    <%= form.text_field :description, required: true %>
+  </p>
+  <p>
+    <%= form.label :amount, "Importe" %><br>
+    <%= form.number_field :amount, required: true, step: "0.01", min: "0.01" %>
+  </p>
+  <p>
+    <%= form.label :date, "Fecha" %><br>
+    <%= form.date_field :date, required: true %>
+  </p>
+  <p>
+    <%= form.label :notes, "Notas" %><br>
+    <%= form.text_area :notes %>
+  </p>
+  <p>
+    <%= form.label :user_id, "Usuario" %><br>
+    <%= form.collection_select :user_id, @users, :id, :name, { prompt: "Seleccionar usuario" }, { required: true } %>
+  </p>
+  <p>
+    <%= form.label :category_id, "Categoría" %><br>
+    <%= form.collection_select :category_id, @categories, :id, :name, { prompt: "Seleccionar categoría" }, { required: true } %>
+  </p>
+  <p>
+    <%= form.label :household_id, "Hogar" %><br>
+    <%= form.collection_select :household_id, @households, :id, :name, include_blank: "Personal" %>
+  </p>
+  <%= form.submit "Guardar gasto" %>
+<% end %>

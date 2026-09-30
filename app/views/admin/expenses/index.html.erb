@@ -1,0 +1,31 @@
+<h1>Gastos</h1>
+
+<p><%= link_to "Nuevo gasto", new_admin_expense_path %></p>
+
+<% if @expenses.empty? %>
+  <p>No hay gastos registrados.</p>
+<% else %>
+  <table>
+    <thead>
+      <tr><th>Fecha</th><th>Descripción</th><th>Importe</th><th>Usuario</th><th>Categoría</th><th>Hogar</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+      <% @expenses.each do |expense| %>
+        <tr>
+          <td><%= expense.date %></td>
+          <td><%= expense.description %></td>
+          <td><%= number_with_precision(expense.amount, precision: 2) %></td>
+          <td><%= expense.user.name %></td>
+          <td><%= expense.category.name %></td>
+          <td><%= expense.household&.name || "Personal" %></td>
+          <td>
+            <%= link_to "Ver", admin_expense_path(expense) %>
+            <%= link_to "Editar", edit_admin_expense_path(expense) %>
+            <%= button_to "Eliminar", admin_expense_path(expense), method: :delete,
+              form: { data: { turbo_confirm: "¿Eliminar este gasto?" } } %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

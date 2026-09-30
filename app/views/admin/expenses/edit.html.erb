@@ -1,0 +1,8 @@
+<h1>Editar gasto</h1>
+
+<%= render "form", expense: @expense %>
+
+<p>
+  <%= link_to "Ver gasto", admin_expense_path(@expense) %>
+  <%= link_to "Volver a gastos", admin_expenses_path %>
+</p>
