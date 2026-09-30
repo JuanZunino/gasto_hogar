@@ -1,0 +1,12 @@
+<h1>Pertenencia a hogar</h1>
+
+<p><strong>Usuario:</strong> <%= @membership.user.name %></p>
+<p><strong>Hogar:</strong> <%= @membership.household.name %></p>
+<p><strong>Rol:</strong> <%= @membership.role %></p>
+
+<p>
+  <%= link_to "Editar", edit_admin_membership_path(@membership) %>
+  <%= link_to "Volver a pertenencias", admin_memberships_path %>
+</p>
+<%= button_to "Eliminar", admin_membership_path(@membership), method: :delete,
+  form: { data: { turbo_confirm: "¿Eliminar esta pertenencia?" } } %>

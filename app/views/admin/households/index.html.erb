@@ -1,0 +1,27 @@
+<h1>Hogares</h1>
+
+<p><%= link_to "Nuevo hogar", new_admin_household_path %></p>
+
+<% if @households.empty? %>
+  <p>No hay hogares registrados.</p>
+<% else %>
+  <table>
+    <thead>
+      <tr><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+      <% @households.each do |household| %>
+        <tr>
+          <td><%= household.name %></td>
+          <td><%= household.description %></td>
+          <td>
+            <%= link_to "Ver", admin_household_path(household) %>
+            <%= link_to "Editar", edit_admin_household_path(household) %>
+            <%= button_to "Eliminar", admin_household_path(household), method: :delete,
+              form: { data: { turbo_confirm: "¿Eliminar este hogar?" } } %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

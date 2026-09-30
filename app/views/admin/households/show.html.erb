@@ -1,0 +1,31 @@
+<h1><%= @household.name %></h1>
+
+<p><strong>Descripción:</strong> <%= @household.description.presence || "Sin descripción" %></p>
+
+<p>
+  <%= link_to "Editar", edit_admin_household_path(@household) %>
+  <%= link_to "Volver a hogares", admin_households_path %>
+</p>
+<%= button_to "Eliminar", admin_household_path(@household), method: :delete,
+  form: { data: { turbo_confirm: "¿Eliminar este hogar?" } } %>
+
+<h2>Integrantes actuales</h2>
+
+<% if @memberships.empty? %>
+  <p>No hay integrantes en este hogar.</p>
+<% else %>
+  <table>
+    <thead>
+      <tr><th>Nombre</th><th>Email</th><th>Rol</th></tr>
+    </thead>
+    <tbody>
+      <% @memberships.each do |membership| %>
+        <tr>
+          <td><%= membership.user.name %></td>
+          <td><%= membership.user.email %></td>
+          <td><%= membership.role %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

@@ -1,0 +1,26 @@
+<%= form_with model: [:admin, membership] do |form| %>
+  <% if membership.errors.any? %>
+    <div role="alert">
+      <h2>No se pudo guardar la pertenencia:</h2>
+      <ul>
+        <% membership.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <p>
+    <%= form.label :user_id, "Usuario" %><br>
+    <%= form.collection_select :user_id, @users, :id, :name, { prompt: "Seleccionar usuario" }, { required: true } %>
+  </p>
+  <p>
+    <%= form.label :household_id, "Hogar" %><br>
+    <%= form.collection_select :household_id, @households, :id, :name, { prompt: "Seleccionar hogar" }, { required: true } %>
+  </p>
+  <p>
+    <%= form.label :role, "Rol" %><br>
+    <%= form.select :role, ["owner", "member"] %>
+  </p>
+  <%= form.submit "Guardar pertenencia" %>
+<% end %>

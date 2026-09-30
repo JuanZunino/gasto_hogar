@@ -2,6 +2,8 @@ Rails.application.routes.draw do
   namespace :admin do
     resources :categories
     resources :expenses
+    resources :households
+    resources :memberships
   end
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html

@@ -1,0 +1,8 @@
+<h1>Editar hogar</h1>
+
+<%= render "form", household: @household %>
+
+<p>
+  <%= link_to "Ver hogar", admin_household_path(@household) %>
+  <%= link_to "Volver a hogares", admin_households_path %>
+</p>

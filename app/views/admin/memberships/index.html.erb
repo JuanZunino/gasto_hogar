@@ -1,0 +1,28 @@
+<h1>Pertenencias a hogares</h1>
+
+<p><%= link_to "Agregar integrante", new_admin_membership_path %></p>
+
+<% if @memberships.empty? %>
+  <p>No hay pertenencias registradas.</p>
+<% else %>
+  <table>
+    <thead>
+      <tr><th>Usuario</th><th>Hogar</th><th>Rol</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+      <% @memberships.each do |membership| %>
+        <tr>
+          <td><%= membership.user.name %></td>
+          <td><%= membership.household.name %></td>
+          <td><%= membership.role %></td>
+          <td>
+            <%= link_to "Ver", admin_membership_path(membership) %>
+            <%= link_to "Editar", edit_admin_membership_path(membership) %>
+            <%= button_to "Eliminar", admin_membership_path(membership), method: :delete,
+              form: { data: { turbo_confirm: "¿Eliminar esta pertenencia?" } } %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
