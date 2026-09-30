@@ -1,0 +1,8 @@
+<h1>Editar usuario</h1>
+
+<%= render "form", user: @user %>
+
+<p>
+  <%= link_to "Ver usuario", admin_user_path(@user) %>
+  <%= link_to "Volver a usuarios", admin_users_path %>
+</p>

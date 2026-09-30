@@ -1,0 +1,28 @@
+<h1>Usuarios</h1>
+
+<p><%= link_to "Nuevo usuario", new_admin_user_path %></p>
+
+<% if @users.empty? %>
+  <p>No hay usuarios registrados.</p>
+<% else %>
+  <table>
+    <thead>
+      <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+      <% @users.each do |user| %>
+        <tr>
+          <td><%= user.name %></td>
+          <td><%= user.email %></td>
+          <td><%= user.role %></td>
+          <td>
+            <%= link_to "Ver", admin_user_path(user) %>
+            <%= link_to "Editar", edit_admin_user_path(user) %>
+            <%= button_to "Eliminar", admin_user_path(user), method: :delete,
+              form: { data: { turbo_confirm: "¿Eliminar este usuario?" } } %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

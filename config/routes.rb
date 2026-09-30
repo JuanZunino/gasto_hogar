@@ -4,6 +4,7 @@ Rails.application.routes.draw do
     resources :expenses
     resources :households
     resources :memberships
+    resources :users
   end
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
