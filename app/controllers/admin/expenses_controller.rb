@@ -1,4 +1,4 @@
-class Admin::ExpensesController < ApplicationController
+class Admin::ExpensesController < Admin::BaseController
   before_action :set_expense, only: %i[show edit update destroy]
   before_action :load_form_options, only: %i[new edit create update]
 

@@ -2,6 +2,7 @@ require "test_helper"
 
 class Admin::HouseholdsControllerTest < ActionDispatch::IntegrationTest
   setup do
+    sign_in_admin
     @household = Household.create!(name: "Casa", description: "Hogar compartido")
     @user = User.create!(name: "Ana", email: "ana@example.com", password: "clave-segura")
     @membership = Membership.create!(user: @user, household: @household, role: "owner")

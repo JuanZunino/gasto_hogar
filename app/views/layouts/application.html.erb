@@ -24,6 +24,11 @@
   </head>
 
   <body>
+    <% if respond_to?(:current_admin) && current_admin %>
+      <nav aria-label="Sesión administrativa">
+        <%= button_to "Cerrar sesión", admin_logout_path, method: :delete %>
+      </nav>
+    <% end %>
     <% if notice.present? %>
       <p role="status"><%= notice %></p>
     <% end %>

@@ -1,0 +1,13 @@
+<h1>Iniciar sesión administrativa</h1>
+
+<%= form_with url: admin_login_path do |form| %>
+  <p>
+    <%= form.label :email, "Email" %><br>
+    <%= form.email_field :email, required: true, autocomplete: "username" %>
+  </p>
+  <p>
+    <%= form.label :password, "Contraseña" %><br>
+    <%= form.password_field :password, required: true, autocomplete: "current-password" %>
+  </p>
+  <%= form.submit "Iniciar sesión" %>
+<% end %>

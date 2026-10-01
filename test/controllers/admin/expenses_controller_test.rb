@@ -2,6 +2,7 @@ require "test_helper"
 
 class Admin::ExpensesControllerTest < ActionDispatch::IntegrationTest
   setup do
+    sign_in_admin
     @user = User.create!(name: "Ana", email: "ana@example.com", password: "clave-segura")
     @category = Category.create!(name: "Alimentos")
     @household = Household.create!(name: "Casa")

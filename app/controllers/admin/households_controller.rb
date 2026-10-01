@@ -1,4 +1,4 @@
-class Admin::HouseholdsController < ApplicationController
+class Admin::HouseholdsController < Admin::BaseController
   before_action :set_household, only: %i[show edit update destroy]
 
   def index

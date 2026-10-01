@@ -2,6 +2,7 @@ require "test_helper"
 
 class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
   setup do
+    sign_in_admin
     @user = User.create!(name: "Ana", email: "ana@example.com", password: "original-segura", role: "user")
     @attributes = { name: "Luis", email: "luis@example.com", password: "nueva-segura",
       password_confirmation: "nueva-segura", role: "admin" }
@@ -176,7 +177,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to admin_users_url
     follow_redirect!
     assert_select "[role='status']", text: "Usuario eliminado correctamente."
-    assert_select "p", text: "No hay usuarios registrados."
+    assert_select "td", text: "ana@example.com", count: 0
   end
 
   test "preserves user with expenses and memberships and explains restriction" do

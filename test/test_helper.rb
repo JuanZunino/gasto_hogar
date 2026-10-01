@@ -13,3 +13,9 @@ module ActiveSupport
     # Add more helper methods to be used by all tests here...
   end
 end
+
+require_relative "support/admin_session_helper"
+
+class ActionDispatch::IntegrationTest
+  include AdminSessionHelper
+end

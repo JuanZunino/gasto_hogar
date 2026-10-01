@@ -2,6 +2,7 @@ require "test_helper"
 
 class Admin::CategoriesControllerTest < ActionDispatch::IntegrationTest
   setup do
+    sign_in_admin
     @category = Category.create!(name: "Alimentos", description: "Compras de comida")
   end
 

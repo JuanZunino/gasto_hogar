@@ -1,4 +1,4 @@
-class Admin::MembershipsController < ApplicationController
+class Admin::MembershipsController < Admin::BaseController
   before_action :set_membership, only: %i[show edit update destroy]
   before_action :load_form_options, only: %i[new edit create update]
 
