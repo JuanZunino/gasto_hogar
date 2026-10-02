@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
+  include ActionMailer::TestHelper
+
   setup do
     sign_in_admin
     @user = User.create!(name: "Ana", email: "ana@example.com", password: "original-segura", role: "user")
@@ -200,6 +202,59 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
   test "returns not found for unknown user" do
     get admin_user_url(id: -1)
     assert_response :not_found
+  end
+
+  test "successful admin creation enqueues and delivers one welcome email" do
+    assert_enqueued_emails 1 do
+      post admin_users_url, params: { user: @attributes }
+    end
+
+    user = User.find_by!(email: @attributes[:email])
+    assert_redirected_to admin_user_url(user)
+    assert_enqueued_email_with UserMailer, :welcome_email, args: [ user ]
+    assert_emails 1 do
+      deliver_enqueued_emails
+    end
+    email = ActionMailer::Base.deliveries.last
+    assert_equal [ user.email ], email.to
+    assert_includes email.text_part.body.decoded, user.name
+    assert_not_includes email.text_part.body.decoded, user.password_digest
+    assert_not_includes email.text_part.body.decoded, @attributes[:password]
+  end
+
+  test "failed creation does not enqueue or send a welcome email" do
+    assert_no_emails do
+      assert_no_enqueued_emails do
+        post admin_users_url, params: { user: @attributes.merge(name: "") }
+      end
+    end
+    assert_response :unprocessable_entity
+  end
+
+  test "editing a user does not enqueue or send a welcome email" do
+    assert_no_emails do
+      assert_no_enqueued_emails do
+        patch admin_user_url(@user), params: { user: { name: "Actualizado" } }
+      end
+    end
+    assert_redirected_to admin_user_url(@user)
+  end
+
+  test "deleting a user does not enqueue or send a welcome email" do
+    assert_no_emails do
+      assert_no_enqueued_emails do
+        delete admin_user_url(@user)
+      end
+    end
+    assert_redirected_to admin_users_url
+  end
+
+  test "creating a user directly does not send a welcome email" do
+    assert_no_emails do
+      assert_no_enqueued_emails do
+        User.create!(@attributes)
+      end
+    end
   end
 
   private

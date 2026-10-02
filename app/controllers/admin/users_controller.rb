@@ -19,6 +19,7 @@ class Admin::UsersController < Admin::BaseController
     @user = User.new(user_params)
 
     if @user.save
+      UserMailer.welcome_email(@user).deliver_later
       redirect_to admin_user_path(@user), notice: "Usuario creado correctamente.", status: :see_other
     else
       render :new, status: :unprocessable_entity
