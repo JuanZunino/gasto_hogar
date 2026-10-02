@@ -4,6 +4,8 @@ Rails.application.routes.draw do
       post "login", to: "sessions#create"
       get "profile", to: "profiles#show"
       resources :expenses, only: %i[index show create update destroy]
+      resources :categories, only: :index
+      resources :households, only: %i[index show]
     end
   end
 
