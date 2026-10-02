@@ -3,6 +3,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       post "login", to: "sessions#create"
       get "profile", to: "profiles#show"
+      resources :expenses, only: %i[index show create update destroy]
     end
   end
 
