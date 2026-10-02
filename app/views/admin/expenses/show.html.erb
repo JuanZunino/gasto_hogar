@@ -8,6 +8,16 @@
 <p><strong>Notas:</strong> <%= @expense.notes.presence || "Sin notas" %></p>
 
 <p>
+  <strong>Comprobante:</strong>
+  <% if @expense.receipt.attached? %>
+    <%= @expense.receipt.filename %>
+    <%= link_to "Descargar comprobante", rails_blob_path(@expense.receipt, disposition: "attachment") %>
+  <% else %>
+    Sin comprobante
+  <% end %>
+</p>
+
+<p>
   <%= link_to "Editar", edit_admin_expense_path(@expense) %>
   <%= link_to "Volver a gastos", admin_expenses_path %>
 </p>

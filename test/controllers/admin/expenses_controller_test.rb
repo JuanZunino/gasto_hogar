@@ -172,6 +172,67 @@ class Admin::ExpensesControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  teardown do
+    @user.expenses.each { |expense| expense.receipt.purge if expense.receipt.attached? }
+  end
+
+  test "new and edit forms allow an optional receipt upload" do
+    [ new_admin_expense_url, edit_admin_expense_url(@expense) ].each do |url|
+      get url
+      assert_response :ok
+      assert_select "form[enctype='multipart/form-data']" do
+        assert_select "input[type='file'][name='expense[receipt]']:not([required])"
+      end
+    end
+  end
+
+  test "creates expense with uploaded receipt and exposes an Active Storage download link" do
+    post admin_expenses_url, params: { expense: @attributes.merge(receipt: fixture_file_upload("receipt.pdf", "application/pdf")) }
+
+    expense = @user.expenses.order(:id).last
+    assert_redirected_to admin_expense_url(expense)
+    assert expense.receipt.attached?
+    assert_equal expense, expense.receipt.attachment.record
+    assert_not @expense.reload.receipt.attached?
+    get admin_expense_url(expense)
+    assert_response :ok
+    assert_select "a[href=?]", rails_blob_path(expense.receipt, disposition: "attachment"), text: "Descargar comprobante"
+  end
+
+  test "show indicates when receipt is absent" do
+    get admin_expense_url(@expense)
+
+    assert_response :ok
+    assert_select "p", text: /Sin comprobante/
+  end
+
+  test "update attaches and replaces receipt but preserves it without a new upload" do
+    patch admin_expense_url(@expense), params: { expense: { receipt: fixture_file_upload("receipt.pdf", "application/pdf") } }
+    assert_redirected_to admin_expense_url(@expense)
+    original_blob = @expense.reload.receipt.blob
+    assert @expense.receipt.attached?
+
+    [ { notes: "Actualizado" }, { receipt: "" }, { receipt: nil }, { receipt: "/etc/passwd" } ].each do |attributes|
+      patch admin_expense_url(@expense), params: { expense: attributes }
+      assert_redirected_to admin_expense_url(@expense)
+      assert_equal original_blob.id, @expense.reload.receipt.blob_id
+    end
+
+    patch admin_expense_url(@expense), params: { expense: { receipt: fixture_file_upload("receipt.pdf", "application/pdf") } }
+    assert_redirected_to admin_expense_url(@expense)
+    assert_not_equal original_blob.id, @expense.reload.receipt.blob_id
+    assert_equal 1, ActiveStorage::Attachment.where(record: @expense, name: "receipt").count
+    original_blob.purge
+  end
+
+  test "client file paths are not used as attachments" do
+    post admin_expenses_url, params: { expense: @attributes.merge(receipt: "/etc/passwd") }
+
+    expense = @user.expenses.order(:id).last
+    assert_redirected_to admin_expense_url(expense)
+    assert_not expense.receipt.attached?
+  end
+
   private
 
   def assert_form_options

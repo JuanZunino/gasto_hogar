@@ -52,6 +52,8 @@ class Admin::ExpensesController < Admin::BaseController
   end
 
   def expense_params
-    params.require(:expense).permit(:description, :amount, :date, :notes, :user_id, :category_id, :household_id)
+    attributes = params.require(:expense).permit(:description, :amount, :date, :notes, :user_id, :category_id, :household_id, :receipt)
+    attributes.delete(:receipt) unless attributes[:receipt].is_a?(ActionDispatch::Http::UploadedFile)
+    attributes
   end
 end

@@ -1,4 +1,6 @@
 class Expense < ApplicationRecord
+  has_one_attached :receipt
+
   belongs_to :user
   belongs_to :category
   belongs_to :household, optional: true

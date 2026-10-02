@@ -215,6 +215,34 @@ class Api::V1::ExpensesControllerTest < ActionDispatch::IntegrationTest
     assert_equal previous, @personal.reload.attributes
   end
 
+  teardown do
+    @user.expenses.each { |expense| expense.receipt.purge if expense.receipt.attached? }
+  end
+
+  test "API indicates receipt presence and preserves attachment when updating other data" do
+    File.open(file_fixture("receipt.pdf")) do |file|
+      @personal.receipt.attach(io: file, filename: "receipt.pdf", content_type: "application/pdf")
+    end
+    blob_id = @personal.receipt.blob_id
+
+    get api_v1_expenses_url, headers: @headers, as: :json
+    assert_response :ok
+    expenses = response.parsed_body.index_by { |expense| expense["id"] }
+    assert_equal true, expenses[@personal.id]["receipt_attached"]
+    assert_equal false, expenses[@shared.id]["receipt_attached"]
+
+    get api_v1_expense_url(@personal), headers: @headers, as: :json
+    assert_response :ok
+    assert_equal true, response.parsed_body["receipt_attached"]
+    assert_public_expense(response.parsed_body)
+
+    patch api_v1_expense_url(@personal), params: { notes: "Actualizado", receipt: "/etc/passwd" }, headers: @headers, as: :json
+    assert_response :ok
+    assert_equal true, response.parsed_body["receipt_attached"]
+    assert_equal blob_id, @personal.reload.receipt.blob_id
+    assert_public_expense(response.parsed_body)
+  end
+
   private
 
   def valid_params
@@ -230,7 +258,8 @@ class Api::V1::ExpensesControllerTest < ActionDispatch::IntegrationTest
 
   def assert_public_expense(expense)
     assert_equal "application/json", response.media_type
-    assert_equal %w[amount category date description household id notes], expense.keys.sort
+    assert_equal %w[amount category date description household id notes receipt_attached], expense.keys.sort
+    assert_includes [ true, false ], expense["receipt_attached"]
     assert_equal %w[id name], expense["category"].keys.sort
     assert_equal %w[id name], expense["household"].keys.sort if expense["household"]
     assert_no_private_data

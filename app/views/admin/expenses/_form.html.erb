@@ -38,5 +38,13 @@
     <%= form.label :household_id, "Hogar" %><br>
     <%= form.collection_select :household_id, @households, :id, :name, include_blank: "Personal" %>
   </p>
+  <p>
+    <%= form.label :receipt, "Comprobante (opcional)" %><br>
+    <%= form.file_field :receipt, accept: "image/*,application/pdf" %>
+    <% if expense.receipt.attached? %>
+      <br>Comprobante actual: <%= expense.receipt.filename %>.
+      Se conservará si no seleccionas uno nuevo.
+    <% end %>
+  </p>
   <%= form.submit "Guardar gasto" %>
 <% end %>

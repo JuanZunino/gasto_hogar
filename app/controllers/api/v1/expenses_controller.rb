@@ -2,7 +2,7 @@ class Api::V1::ExpensesController < Api::V1::BaseController
   before_action :set_expense, only: %i[show update destroy]
 
   def index
-    expenses = @current_user.expenses.includes(:category, :household)
+    expenses = @current_user.expenses.includes(:category, :household, :receipt_attachment)
     expenses = expenses.where(date: filter_date(:from)..) if params[:from].present?
     expenses = expenses.where(date: ..filter_date(:to)) if params[:to].present?
     expenses = expenses.where(category_id: params[:category_id]) if params[:category_id].present?
@@ -60,6 +60,7 @@ class Api::V1::ExpensesController < Api::V1::BaseController
 
   def expense_json(expense)
     expense.as_json(only: %i[id description amount date notes]).merge(
+      "receipt_attached" => expense.receipt.attached?,
       "category" => expense.category.as_json(only: %i[id name]),
       "household" => expense.household&.as_json(only: %i[id name])
     )
