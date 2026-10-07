@@ -15,6 +15,11 @@ class Admin::SessionsControllerTest < ActionDispatch::IntegrationTest
       assert_select "input[name='password'][type='password'][required]"
     end
     assert_select "form[action=?]", admin_logout_path, count: 0
+    assert_select "nav[aria-label='Navegación administrativa']", count: 0
+    assert_select "link[href=?][integrity][crossorigin='anonymous']",
+      "https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+    assert_select "script[src=?][defer][integrity][crossorigin='anonymous']",
+      "https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
     assert_not_includes response.body, @admin.password_digest
   end
 
@@ -70,8 +75,10 @@ class Admin::SessionsControllerTest < ActionDispatch::IntegrationTest
       get "/admin/#{resource}"
       assert_response :success
       assert_select "form[action=?]", admin_logout_path
+      assert_admin_navigation
       get "/admin/#{resource}/new"
       assert_response :success
+      assert_admin_navigation
     end
   end
 
@@ -86,6 +93,7 @@ class Admin::SessionsControllerTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_select "[role='status']", text: "Sesión cerrada correctamente."
     assert_select "form[action=?]", admin_logout_path, count: 0
+    assert_select "nav[aria-label='Navegación administrativa']", count: 0
     get admin_users_url
     assert_redirected_to admin_login_url
   end
@@ -113,8 +121,24 @@ class Admin::SessionsControllerTest < ActionDispatch::IntegrationTest
     post admin_login_url, params: { email: @user.email, password: "clave-user" }
 
     assert_response :unprocessable_entity
+    assert_select "nav[aria-label='Navegación administrativa']", count: 0
     assert_nil session[:admin_user_id]
     get admin_users_url
     assert_redirected_to admin_login_url
+  end
+
+  private
+
+  def assert_admin_navigation
+    assert_select "nav.navbar" do
+      { "GastoHogar" => admin_expenses_path, "Gastos" => admin_expenses_path,
+        "Categorías" => admin_categories_path, "Hogares" => admin_households_path,
+        "Membresías" => admin_memberships_path, "Usuarios" => admin_users_path }.each do |label, path|
+        assert_select "a[href=?]", path, text: label
+      end
+      assert_select "button[data-bs-toggle='collapse'][data-bs-target='#admin-navbar'][aria-controls='admin-navbar']"
+      assert_select "#admin-navbar.collapse.navbar-collapse"
+      assert_select "form[action=?] input[name='_method'][value='delete']", admin_logout_path
+    end
   end
 end

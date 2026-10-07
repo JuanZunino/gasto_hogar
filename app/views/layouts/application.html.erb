@@ -24,17 +24,16 @@
   </head>
 
   <body>
-    <% if respond_to?(:current_admin) && current_admin %>
-      <nav aria-label="Sesión administrativa">
-        <%= button_to "Cerrar sesión", admin_logout_path, method: :delete %>
-      </nav>
+    <% if content_for?(:content) %>
+      <%= yield :content %>
+    <% else %>
+      <% if notice.present? %>
+        <p role="status"><%= notice %></p>
+      <% end %>
+      <% if alert.present? %>
+        <p role="alert"><%= alert %></p>
+      <% end %>
+      <%= yield %>
     <% end %>
-    <% if notice.present? %>
-      <p role="status"><%= notice %></p>
-    <% end %>
-    <% if alert.present? %>
-      <p role="alert"><%= alert %></p>
-    <% end %>
-    <%= yield %>
   </body>
 </html>

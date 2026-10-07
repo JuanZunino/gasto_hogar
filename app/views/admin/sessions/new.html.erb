@@ -1,13 +1,17 @@
-<h1>Iniciar sesión administrativa</h1>
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-4">
+    <h1 class="h3 mb-4">Iniciar sesión administrativa</h1>
 
-<%= form_with url: admin_login_path do |form| %>
-  <p>
-    <%= form.label :email, "Email" %><br>
-    <%= form.email_field :email, required: true, autocomplete: "username" %>
-  </p>
-  <p>
-    <%= form.label :password, "Contraseña" %><br>
-    <%= form.password_field :password, required: true, autocomplete: "current-password" %>
-  </p>
-  <%= form.submit "Iniciar sesión" %>
-<% end %>
+    <%= form_with url: admin_login_path do |form| %>
+      <div class="mb-3">
+        <%= form.label :email, "Email", class: "form-label" %>
+        <%= form.email_field :email, required: true, autocomplete: "username", class: "form-control" %>
+      </div>
+      <div class="mb-3">
+        <%= form.label :password, "Contraseña", class: "form-label" %>
+        <%= form.password_field :password, required: true, autocomplete: "current-password", class: "form-control" %>
+      </div>
+      <%= form.submit "Iniciar sesión", class: "btn btn-primary w-100" %>
+    <% end %>
+  </div>
+</div>

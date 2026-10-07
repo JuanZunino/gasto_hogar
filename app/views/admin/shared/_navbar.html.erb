@@ -1,0 +1,19 @@
+<nav class="navbar navbar-expand-lg bg-dark" data-bs-theme="dark" aria-label="Navegación administrativa">
+  <div class="container">
+    <%= link_to "GastoHogar", admin_expenses_path, class: "navbar-brand" %>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#admin-navbar"
+            aria-controls="admin-navbar" aria-expanded="false" aria-label="Mostrar u ocultar navegación">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="admin-navbar">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><%= link_to "Gastos", admin_expenses_path, class: "nav-link" %></li>
+        <li class="nav-item"><%= link_to "Categorías", admin_categories_path, class: "nav-link" %></li>
+        <li class="nav-item"><%= link_to "Hogares", admin_households_path, class: "nav-link" %></li>
+        <li class="nav-item"><%= link_to "Membresías", admin_memberships_path, class: "nav-link" %></li>
+        <li class="nav-item"><%= link_to "Usuarios", admin_users_path, class: "nav-link" %></li>
+      </ul>
+      <%= button_to "Cerrar sesión", admin_logout_path, method: :delete, class: "btn btn-outline-light" %>
+    </div>
+  </div>
+</nav>
