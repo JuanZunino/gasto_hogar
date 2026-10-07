@@ -17,6 +17,7 @@ class Admin::UsersController < Admin::BaseController
 
   def create
     @user = User.new(user_params)
+    assign_role
 
     if @user.save
       UserMailer.welcome_email(@user).deliver_later
@@ -29,6 +30,7 @@ class Admin::UsersController < Admin::BaseController
   def update
     attributes = update_user_params
     @user.assign_attributes(attributes)
+    assign_role
 
     if attributes[:password].blank? && attributes[:password_confirmation].present?
       @user.valid?
@@ -66,6 +68,17 @@ class Admin::UsersController < Admin::BaseController
   end
 
   def user_params
-    params.require(:user).permit(:name, :email, :password, :password_confirmation, :role)
+    params.require(:user).permit(:name, :email, :password, :password_confirmation)
+  end
+
+  def assign_role
+    attributes = params.require(:user)
+    return unless attributes.key?(:role)
+
+    role = attributes[:role]
+    return if role.is_a?(Array) || role.is_a?(ActionController::Parameters)
+
+    # The model validates the explicitly assigned role before saving.
+    @user.role = role
   end
 end

@@ -103,6 +103,69 @@ class Admin::MembershipsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[role='status']", text: "Pertenencia actualizada correctamente."
   end
 
+  test "admin can update membership roles in both directions" do
+    %w[member owner].each do |role|
+      patch admin_membership_url(@membership), params: { membership: { role: role } }
+
+      assert_redirected_to admin_membership_url(@membership)
+      assert_equal role, @membership.reload.role
+      assert_equal @user, @membership.user
+      assert_equal @household, @membership.household
+    end
+  end
+
+  test "omitted role uses default on create and preserves existing role on update" do
+    assert_difference "Membership.count", 1 do
+      post admin_memberships_url, params: { membership: @attributes.except(:role) }
+    end
+    membership = Membership.find_by!(user: @user, household: @other_household)
+    assert_redirected_to admin_membership_url(membership)
+    assert_equal "member", membership.role
+
+    user = User.create!(name: "Luis", email: "luis@example.com", password: "clave-segura")
+    patch admin_membership_url(@membership), params: { membership: { user_id: user.id } }
+
+    assert_redirected_to admin_membership_url(@membership)
+    assert_equal "owner", @membership.reload.role
+    assert_equal user, @membership.user
+  end
+
+  test "invalid scalar roles reject creation and the entire update" do
+    [ "", nil, "user", 123 ].each do |role|
+      assert_no_difference "Membership.count" do
+        post admin_memberships_url, params: { membership: @attributes.merge(role: role) }, as: :json, headers: { "Accept" => "text/html" }
+      end
+      assert_response :unprocessable_entity
+
+      original = @membership.attributes
+      patch admin_membership_url(@membership),
+        params: { membership: { household_id: @other_household.id, role: role } }, as: :json, headers: { "Accept" => "text/html" }
+
+      assert_response :unprocessable_entity
+      assert_equal original, @membership.reload.attributes
+    end
+  end
+
+  test "structured roles remain filtered on create and update" do
+    [ [ "owner" ], { value: "owner" } ].each_with_index do |role, index|
+      household = Household.create!(name: "Casa #{index}")
+      assert_difference "Membership.count", 1 do
+        post admin_memberships_url,
+          params: { membership: @attributes.merge(household_id: household.id, role: role) }, as: :json, headers: { "Accept" => "text/html" }
+      end
+      membership = Membership.find_by!(user: @user, household: household)
+      assert_redirected_to admin_membership_url(membership)
+      assert_equal "member", membership.role
+
+      patch admin_membership_url(@membership),
+        params: { membership: { household_id: @other_household.id, role: role } }, as: :json, headers: { "Accept" => "text/html" }
+
+      assert_redirected_to admin_membership_url(@membership)
+      assert_equal "owner", @membership.reload.role
+      assert_equal @other_household, @membership.household
+    end
+  end
+
   test "rejects update to an existing pair without changing persisted values" do
     Membership.create!(@attributes)
     original = @membership.attributes

@@ -94,6 +94,78 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "admin can create users with either supported role" do
+    %w[user admin].each do |role|
+      attributes = @attributes.merge(email: "#{role}-role@example.com", role: role)
+      assert_difference "User.count", 1 do
+        post admin_users_url, params: { user: attributes }
+      end
+
+      user = User.find_by!(email: attributes[:email])
+      assert_redirected_to admin_user_url(user)
+      assert_equal role, user.role
+    end
+  end
+
+  test "admin can update roles in both directions without changing password" do
+    digest = @user.password_digest
+    %w[admin user].each do |role|
+      patch admin_user_url(@user), params: { user: { role: role } }
+
+      assert_redirected_to admin_user_url(@user)
+      assert_equal role, @user.reload.role
+      assert_equal digest, @user.password_digest
+    end
+  end
+
+  test "omitted role uses default on create and preserves existing role on update" do
+    post admin_users_url, params: { user: @attributes.except(:role) }
+
+    user = User.find_by!(email: @attributes[:email])
+    assert_redirected_to admin_user_url(user)
+    assert_equal "user", user.role
+
+    @user.update!(role: "admin")
+    patch admin_user_url(@user), params: { user: { name: "Actualizado" } }
+
+    assert_redirected_to admin_user_url(@user)
+    assert_equal "admin", @user.reload.role
+    assert_equal "Actualizado", @user.name
+  end
+
+  test "invalid scalar roles reject creation and the entire update" do
+    [ "", nil, "member", 123 ].each do |role|
+      assert_no_difference "User.count" do
+        post admin_users_url, params: { user: @attributes.merge(role: role) }, as: :json, headers: { "Accept" => "text/html" }
+      end
+      assert_response :unprocessable_entity
+
+      original = @user.attributes
+      patch admin_user_url(@user), params: { user: { name: "No guardar", role: role } }, as: :json, headers: { "Accept" => "text/html" }
+
+      assert_response :unprocessable_entity
+      assert_equal original, @user.reload.attributes
+    end
+  end
+
+  test "structured roles remain filtered on create and update" do
+    [ [ "admin" ], { value: "admin" } ].each_with_index do |role, index|
+      attributes = @attributes.merge(email: "structured-#{index}@example.com", role: role)
+      assert_difference "User.count", 1 do
+        post admin_users_url, params: { user: attributes }, as: :json, headers: { "Accept" => "text/html" }
+      end
+      user = User.find_by!(email: attributes[:email])
+      assert_redirected_to admin_user_url(user)
+      assert_equal "user", user.role
+
+      patch admin_user_url(@user), params: { user: { name: "Actualizado", role: role } }, as: :json, headers: { "Accept" => "text/html" }
+
+      assert_redirected_to admin_user_url(@user)
+      assert_equal "user", @user.reload.role
+      assert_equal "Actualizado", @user.name
+    end
+  end
+
   test "rejects duplicate email and retains nonsensitive form values" do
     assert_no_difference "User.count" do
       post admin_users_url, params: { user: @attributes.merge(email: @user.email) }

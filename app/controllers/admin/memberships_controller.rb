@@ -18,6 +18,7 @@ class Admin::MembershipsController < Admin::BaseController
 
   def create
     @membership = Membership.new(membership_params)
+    assign_role
 
     if @membership.save
       redirect_to admin_membership_path(@membership), notice: "Integrante agregado correctamente.", status: :see_other
@@ -27,7 +28,10 @@ class Admin::MembershipsController < Admin::BaseController
   end
 
   def update
-    if @membership.update(membership_params)
+    @membership.assign_attributes(membership_params)
+    assign_role
+
+    if @membership.save
       redirect_to admin_membership_path(@membership), notice: "Pertenencia actualizada correctamente.", status: :see_other
     else
       render :edit, status: :unprocessable_entity
@@ -51,6 +55,17 @@ class Admin::MembershipsController < Admin::BaseController
   end
 
   def membership_params
-    params.require(:membership).permit(:user_id, :household_id, :role)
+    params.require(:membership).permit(:user_id, :household_id)
+  end
+
+  def assign_role
+    attributes = params.require(:membership)
+    return unless attributes.key?(:role)
+
+    role = attributes[:role]
+    return if role.is_a?(Array) || role.is_a?(ActionController::Parameters)
+
+    # The model validates the explicitly assigned role before saving.
+    @membership.role = role
   end
 end
