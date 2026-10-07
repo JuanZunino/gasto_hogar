@@ -138,7 +138,7 @@ class Admin::MembershipsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to admin_memberships_url
     follow_redirect!
     assert_select "[role='status']", text: "Pertenencia eliminada correctamente."
-    assert_select "p", text: "No hay pertenencias registradas."
+    assert_select "p", text: "No hay membresías registradas."
   end
 
   test "returns not found for unknown membership" do

@@ -1,12 +1,16 @@
-<h1><%= @user.name %></h1>
+<h1 class="h2 mb-4 text-break"><%= @user.name %></h1>
 
-<p><strong>Email:</strong> <%= @user.email %></p>
-<p><strong>Rol:</strong> <%= @user.role %></p>
-<p><strong>Fecha de creación:</strong> <%= @user.created_at.to_date %></p>
+<div class="card shadow-sm mb-4">
+  <div class="card-body p-4">
+    <p class="text-break"><strong>Email:</strong> <%= @user.email %></p>
+    <p class="text-break"><strong>Rol:</strong> <span class="badge text-bg-secondary"><%= @user.role %></span></p>
+    <p class="text-break"><strong>Fecha de creación:</strong> <%= @user.created_at.to_date %></p>
+  </div>
+</div>
 
-<p>
-  <%= link_to "Editar", edit_admin_user_path(@user) %>
-  <%= link_to "Volver a usuarios", admin_users_path %>
-</p>
-<%= button_to "Eliminar", admin_user_path(@user), method: :delete,
-  form: { data: { turbo_confirm: "¿Eliminar este usuario?" } } %>
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <%= link_to "Editar", edit_admin_user_path(@user), class: "btn btn-outline-primary" %>
+  <%= link_to "Volver a usuarios", admin_users_path, class: "btn btn-outline-secondary" %>
+  <%= button_to "Eliminar", admin_user_path(@user), method: :delete, class: "btn btn-outline-danger",
+    form: { class: "m-0", data: { turbo_confirm: "¿Eliminar este usuario?" } } %>
+</div>

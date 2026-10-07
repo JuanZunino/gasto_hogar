@@ -1,12 +1,16 @@
-<h1>Pertenencia a hogar</h1>
+<h1 class="h2 mb-4 text-break">Integrante del hogar</h1>
 
-<p><strong>Usuario:</strong> <%= @membership.user.name %></p>
-<p><strong>Hogar:</strong> <%= @membership.household.name %></p>
-<p><strong>Rol:</strong> <%= @membership.role %></p>
+<div class="card shadow-sm mb-4">
+  <div class="card-body p-4">
+    <p class="text-break"><strong>Usuario:</strong> <%= @membership.user.name %></p>
+    <p class="text-break"><strong>Hogar:</strong> <%= @membership.household.name %></p>
+    <p class="text-break"><strong>Rol:</strong> <span class="badge text-bg-secondary"><%= @membership.role %></span></p>
+  </div>
+</div>
 
-<p>
-  <%= link_to "Editar", edit_admin_membership_path(@membership) %>
-  <%= link_to "Volver a pertenencias", admin_memberships_path %>
-</p>
-<%= button_to "Eliminar", admin_membership_path(@membership), method: :delete,
-  form: { data: { turbo_confirm: "¿Eliminar esta pertenencia?" } } %>
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <%= link_to "Editar", edit_admin_membership_path(@membership), class: "btn btn-outline-primary" %>
+  <%= link_to "Volver a membresías", admin_memberships_path, class: "btn btn-outline-secondary" %>
+  <%= button_to "Eliminar", admin_membership_path(@membership), method: :delete, class: "btn btn-outline-danger",
+    form: { class: "m-0", data: { turbo_confirm: "¿Eliminar esta membresía?" } } %>
+</div>

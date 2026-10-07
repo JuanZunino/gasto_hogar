@@ -1,50 +1,58 @@
-<%= form_with model: [:admin, expense] do |form| %>
-  <% if expense.errors.any? %>
-    <div role="alert">
-      <h2>No se pudo guardar el gasto:</h2>
-      <ul>
-        <% expense.errors.full_messages.each do |message| %>
-          <li><%= message %></li>
-        <% end %>
-      </ul>
-    </div>
-  <% end %>
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <%= form_with model: [:admin, expense] do |form| %>
+          <% if expense.errors.any? %>
+            <div class="alert alert-danger" role="alert">
+              <h2 class="h5">No se pudo guardar el gasto:</h2>
+              <ul class="mb-0">
+                <% expense.errors.full_messages.each do |message| %>
+                  <li><%= message %></li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
 
-  <p>
-    <%= form.label :description, "Descripción" %><br>
-    <%= form.text_field :description, required: true %>
-  </p>
-  <p>
-    <%= form.label :amount, "Importe" %><br>
-    <%= form.number_field :amount, required: true, step: "0.01", min: "0.01" %>
-  </p>
-  <p>
-    <%= form.label :date, "Fecha" %><br>
-    <%= form.date_field :date, required: true %>
-  </p>
-  <p>
-    <%= form.label :notes, "Notas" %><br>
-    <%= form.text_area :notes %>
-  </p>
-  <p>
-    <%= form.label :user_id, "Usuario" %><br>
-    <%= form.collection_select :user_id, @users, :id, :name, { prompt: "Seleccionar usuario" }, { required: true } %>
-  </p>
-  <p>
-    <%= form.label :category_id, "Categoría" %><br>
-    <%= form.collection_select :category_id, @categories, :id, :name, { prompt: "Seleccionar categoría" }, { required: true } %>
-  </p>
-  <p>
-    <%= form.label :household_id, "Hogar" %><br>
-    <%= form.collection_select :household_id, @households, :id, :name, include_blank: "Personal" %>
-  </p>
-  <p>
-    <%= form.label :receipt, "Comprobante (opcional)" %><br>
-    <%= form.file_field :receipt, accept: "image/*,application/pdf" %>
-    <% if expense.receipt.attached? %>
-      <br>Comprobante actual: <%= expense.receipt.filename %>.
-      Se conservará si no seleccionas uno nuevo.
-    <% end %>
-  </p>
-  <%= form.submit "Guardar gasto" %>
-<% end %>
+          <div class="mb-3">
+            <%= form.label :description, "Descripción", class: "form-label" %>
+            <%= form.text_field :description, required: true, class: "form-control" %>
+          </div>
+          <div class="mb-3">
+            <%= form.label :amount, "Importe", class: "form-label" %>
+            <%= form.number_field :amount, required: true, step: "0.01", min: "0.01", class: "form-control" %>
+          </div>
+          <div class="mb-3">
+            <%= form.label :date, "Fecha", class: "form-label" %>
+            <%= form.date_field :date, required: true, class: "form-control" %>
+          </div>
+          <div class="mb-3">
+            <%= form.label :notes, "Notas", class: "form-label" %>
+            <%= form.text_area :notes, class: "form-control" %>
+          </div>
+          <div class="mb-3">
+            <%= form.label :user_id, "Usuario", class: "form-label" %>
+            <%= form.collection_select :user_id, @users, :id, :name, { prompt: "Seleccionar usuario" }, { required: true, class: "form-select" } %>
+          </div>
+          <div class="mb-3">
+            <%= form.label :category_id, "Categoría", class: "form-label" %>
+            <%= form.collection_select :category_id, @categories, :id, :name, { prompt: "Seleccionar categoría" }, { required: true, class: "form-select" } %>
+          </div>
+          <div class="mb-3">
+            <%= form.label :household_id, "Hogar", class: "form-label" %>
+            <%= form.collection_select :household_id, @households, :id, :name, { include_blank: "Personal" }, { class: "form-select" } %>
+          </div>
+          <div class="mb-3">
+            <%= form.label :receipt, "Comprobante (opcional)", class: "form-label" %>
+            <%= form.file_field :receipt, accept: "image/*,application/pdf", class: "form-control" %>
+            <% if expense.receipt.attached? %>
+              <div class="form-text text-break">Comprobante actual: <%= expense.receipt.filename %>.
+              Se conservará si no seleccionas uno nuevo.</div>
+            <% end %>
+          </div>
+          <%= form.submit "Guardar gasto", class: "btn btn-primary" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

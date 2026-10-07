@@ -1,5 +1,7 @@
-<h1>Nuevo gasto</h1>
+<h1 class="h2 mb-4">Nuevo gasto</h1>
 
 <%= render "form", expense: @expense %>
 
-<p><%= link_to "Volver a gastos", admin_expenses_path %></p>
+<div class="d-flex flex-wrap gap-2 mt-4">
+  <%= link_to "Volver a gastos", admin_expenses_path, class: "btn btn-outline-secondary" %>
+</div>

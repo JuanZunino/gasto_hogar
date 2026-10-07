@@ -1,5 +1,7 @@
-<h1>Agregar integrante</h1>
+<h1 class="h2 mb-4">Agregar integrante</h1>
 
 <%= render "form", membership: @membership %>
 
-<p><%= link_to "Volver a pertenencias", admin_memberships_path %></p>
+<div class="d-flex flex-wrap gap-2 mt-4">
+  <%= link_to "Volver a membresías", admin_memberships_path, class: "btn btn-outline-secondary" %>
+</div>

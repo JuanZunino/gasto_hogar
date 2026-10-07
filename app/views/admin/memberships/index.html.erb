@@ -1,28 +1,38 @@
-<h1>Membresías</h1>
-
-<p><%= link_to "Agregar integrante", new_admin_membership_path %></p>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <h1 class="h2 mb-0">Membresías</h1>
+  <%= link_to "Agregar integrante", new_admin_membership_path, class: "btn btn-primary" %>
+</div>
 
 <% if @memberships.empty? %>
-  <p>No hay pertenencias registradas.</p>
+  <p class="alert alert-info mb-0">No hay membresías registradas.</p>
 <% else %>
-  <table>
-    <thead>
-      <tr><th>Usuario</th><th>Hogar</th><th>Rol</th><th>Acciones</th></tr>
-    </thead>
-    <tbody>
-      <% @memberships.each do |membership| %>
+  <div class="table-responsive border rounded">
+    <table class="table table-striped table-hover align-middle mb-0">
+      <thead class="table-light">
         <tr>
-          <td><%= membership.user.name %></td>
-          <td><%= membership.household.name %></td>
-          <td><%= membership.role %></td>
-          <td>
-            <%= link_to "Ver", admin_membership_path(membership) %>
-            <%= link_to "Editar", edit_admin_membership_path(membership) %>
-            <%= button_to "Eliminar", admin_membership_path(membership), method: :delete,
-              form: { data: { turbo_confirm: "¿Eliminar esta pertenencia?" } } %>
-          </td>
+          <th scope="col">Usuario</th>
+          <th scope="col">Hogar</th>
+          <th scope="col">Rol</th>
+          <th scope="col">Acciones</th>
         </tr>
-      <% end %>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        <% @memberships.each do |membership| %>
+          <tr>
+            <td><%= membership.user.name %></td>
+            <td><%= membership.household.name %></td>
+            <td><span class="badge text-bg-secondary"><%= membership.role %></span></td>
+            <td>
+              <div class="d-flex flex-wrap gap-2">
+                <%= link_to "Ver", admin_membership_path(membership), class: "btn btn-outline-secondary btn-sm" %>
+                <%= link_to "Editar", edit_admin_membership_path(membership), class: "btn btn-outline-primary btn-sm" %>
+                <%= button_to "Eliminar", admin_membership_path(membership), method: :delete, class: "btn btn-outline-danger btn-sm",
+                  form: { class: "m-0", data: { turbo_confirm: "¿Eliminar esta membresía?" } } %>
+              </div>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
 <% end %>

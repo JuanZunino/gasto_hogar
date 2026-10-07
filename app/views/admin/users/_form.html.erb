@@ -1,37 +1,45 @@
-<%= form_with model: [:admin, user] do |form| %>
-  <% if user.errors.any? %>
-    <div role="alert">
-      <h2>No se pudo guardar el usuario:</h2>
-      <ul>
-        <% user.errors.full_messages.each do |message| %>
-          <li><%= message %></li>
-        <% end %>
-      </ul>
-    </div>
-  <% end %>
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <%= form_with model: [:admin, user] do |form| %>
+          <% if user.errors.any? %>
+            <div class="alert alert-danger" role="alert">
+              <h2 class="h5">No se pudo guardar el usuario:</h2>
+              <ul class="mb-0">
+                <% user.errors.full_messages.each do |message| %>
+                  <li><%= message %></li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
 
-  <p>
-    <%= form.label :name, "Nombre" %><br>
-    <%= form.text_field :name, required: true %>
-  </p>
-  <p>
-    <%= form.label :email, "Email" %><br>
-    <%= form.email_field :email, required: true %>
-  </p>
-  <% if user.persisted? %>
-    <p>Deja ambos campos de contraseña vacíos para conservar la contraseña actual.</p>
-  <% end %>
-  <p>
-    <%= form.label :password, "Contraseña" %><br>
-    <%= form.password_field :password, required: user.new_record?, autocomplete: "new-password" %>
-  </p>
-  <p>
-    <%= form.label :password_confirmation, "Confirmar contraseña" %><br>
-    <%= form.password_field :password_confirmation, required: user.new_record?, autocomplete: "new-password" %>
-  </p>
-  <p>
-    <%= form.label :role, "Rol" %><br>
-    <%= form.select :role, ["user", "admin"] %>
-  </p>
-  <%= form.submit "Guardar usuario" %>
-<% end %>
+          <div class="mb-3">
+            <%= form.label :name, "Nombre", class: "form-label" %>
+            <%= form.text_field :name, required: true, class: "form-control" %>
+          </div>
+          <div class="mb-3">
+            <%= form.label :email, "Email", class: "form-label" %>
+            <%= form.email_field :email, required: true, class: "form-control" %>
+          </div>
+          <% if user.persisted? %>
+            <p class="form-text mb-3">Deja ambos campos de contraseña vacíos para conservar la contraseña actual.</p>
+          <% end %>
+          <div class="mb-3">
+            <%= form.label :password, "Contraseña", class: "form-label" %>
+            <%= form.password_field :password, required: user.new_record?, autocomplete: "new-password", class: "form-control" %>
+          </div>
+          <div class="mb-3">
+            <%= form.label :password_confirmation, "Confirmar contraseña", class: "form-label" %>
+            <%= form.password_field :password_confirmation, required: user.new_record?, autocomplete: "new-password", class: "form-control" %>
+          </div>
+          <div class="mb-3">
+            <%= form.label :role, "Rol", class: "form-label" %>
+            <%= form.select :role, ["user", "admin"], {}, { class: "form-select" } %>
+          </div>
+          <%= form.submit "Guardar usuario", class: "btn btn-primary" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

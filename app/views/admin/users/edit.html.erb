@@ -1,8 +1,8 @@
-<h1>Editar usuario</h1>
+<h1 class="h2 mb-4">Editar usuario</h1>
 
 <%= render "form", user: @user %>
 
-<p>
-  <%= link_to "Ver usuario", admin_user_path(@user) %>
-  <%= link_to "Volver a usuarios", admin_users_path %>
-</p>
+<div class="d-flex flex-wrap gap-2 mt-4">
+  <%= link_to "Ver usuario", admin_user_path(@user), class: "btn btn-outline-secondary" %>
+  <%= link_to "Volver a usuarios", admin_users_path, class: "btn btn-outline-secondary" %>
+</div>

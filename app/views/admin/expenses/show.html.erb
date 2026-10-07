@@ -1,25 +1,29 @@
-<h1><%= @expense.description %></h1>
+<h1 class="h2 mb-4 text-break"><%= @expense.description %></h1>
 
-<p><strong>Fecha:</strong> <%= @expense.date %></p>
-<p><strong>Importe:</strong> <%= number_with_precision(@expense.amount, precision: 2) %></p>
-<p><strong>Usuario:</strong> <%= @expense.user.name %></p>
-<p><strong>Categoría:</strong> <%= @expense.category.name %></p>
-<p><strong>Hogar:</strong> <%= @expense.household&.name || "Personal" %></p>
-<p><strong>Notas:</strong> <%= @expense.notes.presence || "Sin notas" %></p>
+<div class="card shadow-sm mb-4">
+  <div class="card-body p-4">
+    <p class="text-break"><strong>Fecha:</strong> <%= @expense.date %></p>
+    <p class="text-break"><strong>Importe:</strong> <%= number_with_precision(@expense.amount, precision: 2) %></p>
+    <p class="text-break"><strong>Usuario:</strong> <%= @expense.user.name %></p>
+    <p class="text-break"><strong>Categoría:</strong> <%= @expense.category.name %></p>
+    <p class="text-break"><strong>Hogar:</strong> <%= @expense.household&.name || "Personal" %></p>
+    <p class="text-break"><strong>Notas:</strong> <%= @expense.notes.presence || "Sin notas" %></p>
 
-<p>
-  <strong>Comprobante:</strong>
-  <% if @expense.receipt.attached? %>
-    <%= @expense.receipt.filename %>
-    <%= link_to "Descargar comprobante", rails_blob_path(@expense.receipt, disposition: "attachment") %>
-  <% else %>
-    Sin comprobante
-  <% end %>
-</p>
+    <p class="text-break">
+      <strong>Comprobante:</strong>
+      <% if @expense.receipt.attached? %>
+        <%= @expense.receipt.filename %>
+        <%= link_to "Descargar comprobante", rails_blob_path(@expense.receipt, disposition: "attachment"), class: "btn btn-outline-secondary" %>
+      <% else %>
+        Sin comprobante
+      <% end %>
+    </p>
+  </div>
+</div>
 
-<p>
-  <%= link_to "Editar", edit_admin_expense_path(@expense) %>
-  <%= link_to "Volver a gastos", admin_expenses_path %>
-</p>
-<%= button_to "Eliminar", admin_expense_path(@expense), method: :delete,
-  form: { data: { turbo_confirm: "¿Eliminar este gasto?" } } %>
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <%= link_to "Editar", edit_admin_expense_path(@expense), class: "btn btn-outline-primary" %>
+  <%= link_to "Volver a gastos", admin_expenses_path, class: "btn btn-outline-secondary" %>
+  <%= button_to "Eliminar", admin_expense_path(@expense), method: :delete, class: "btn btn-outline-danger",
+    form: { class: "m-0", data: { turbo_confirm: "¿Eliminar este gasto?" } } %>
+</div>
