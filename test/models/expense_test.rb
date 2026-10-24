@@ -19,6 +19,62 @@ class ExpenseTest < ActiveSupport::TestCase
     assert_includes @category.expenses, @expense
   end
 
+  test "accepts owned private categories and edits without resupplying the category" do
+    category = @user.categories.create!(name: "Viaje")
+    @expense.category = category
+    @expense.save!
+
+    assert @expense.update(notes: "Actualizado")
+    assert_equal category.id, @expense.reload.category_id
+  end
+
+  test "rejects foreign private categories on creation and update without persisting changes" do
+    other = User.create!(name: "Luis", email: "luis@example.com", password: "clave-segura")
+    foreign = other.categories.create!(name: "Viaje")
+    @expense.category_id = foreign.id
+
+    assert_not @expense.save
+    assert @expense.errors[:category].present?
+    @expense.category = @category
+    @expense.save!
+    previous = @expense.attributes
+
+    assert_not @expense.update(category_id: foreign.id, description: "Cambiar")
+    assert_equal previous, @expense.reload.attributes
+  end
+
+  test "changing the expense owner revalidates its existing private category" do
+    other = User.create!(name: "Luis", email: "luis@example.com", password: "clave-segura")
+    @expense.category = @user.categories.create!(name: "Viaje")
+    @expense.save!
+
+    assert_not @expense.update(user_id: other.id)
+    assert_equal @user.id, @expense.reload.user_id
+    assert @expense.update(user: other, category: @category)
+  end
+
+  test "existing global expenses remain editable and their references are preserved" do
+    @expense.save!
+    ids = @expense.attributes.slice("id", "user_id", "category_id")
+
+    assert @expense.update(notes: "Actualizado")
+    assert_equal ids, @expense.reload.attributes.slice("id", "user_id", "category_id")
+  end
+
+  test "private categories with expenses cannot be destroyed" do
+    category = @user.categories.create!(name: "Viaje")
+    @expense.category = category
+    @expense.save!
+
+    assert_no_difference [ "Category.count", "Expense.count" ] do
+      assert_equal false, category.destroy
+    end
+    assert_equal category.id, @expense.reload.category_id
+    assert_raises(ActiveRecord::InvalidForeignKey) do
+      Category.transaction(requires_new: true) { category.delete }
+    end
+  end
+
   test "persists a household expense and its associations" do
     @expense.household = @household
     @expense.save!

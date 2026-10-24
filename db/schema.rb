@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_173127) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -47,7 +47,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_173127) do
     t.text "description"
     t.string "name", null: false
     t.datetime "updated_at", null: false
-    t.index ["name"], name: "index_categories_on_name", unique: true
+    t.bigint "user_id"
+    t.index "lower(regexp_replace((name)::text, '^[[:space:]]+|[[:space:]]+$'::text, ''::text, 'g'::text))", name: "index_categories_on_global_name", unique: true, where: "(user_id IS NULL)"
+    t.index "user_id, lower(regexp_replace((name)::text, '^[[:space:]]+|[[:space:]]+$'::text, ''::text, 'g'::text))", name: "index_categories_on_private_name", unique: true, where: "(user_id IS NOT NULL)"
+    t.index ["user_id"], name: "index_categories_on_user_id"
   end
 
   create_table "expenses", force: :cascade do |t|
@@ -95,6 +98,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_173127) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "categories", "users"
   add_foreign_key "expenses", "categories"
   add_foreign_key "expenses", "households"
   add_foreign_key "expenses", "users"

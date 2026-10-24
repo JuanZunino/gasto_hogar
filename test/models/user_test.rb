@@ -1,6 +1,21 @@
 require "test_helper"
 
 class UserTest < ActiveSupport::TestCase
+  test "private categories prevent destroying a user even without expenses" do
+    user = User.create!(name: "Propietario", email: "owner@example.com", password: "clave-segura")
+    category = user.categories.create!(name: "Viaje")
+
+    assert_no_difference [ "User.count", "Category.count" ] do
+      assert_equal false, user.destroy
+    end
+    assert user.errors.of_kind?(:base, :"restrict_dependent_destroy.has_many")
+    assert_equal user.id, category.reload.user_id
+
+    assert_raises(ActiveRecord::InvalidForeignKey) do
+      User.transaction(requires_new: true) { user.delete }
+    end
+  end
+
   setup do
     @user = User.new(name: "Ana", email: "ana@example.com", password: "clave-segura")
   end
