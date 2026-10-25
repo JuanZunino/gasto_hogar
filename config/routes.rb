@@ -5,7 +5,7 @@ Rails.application.routes.draw do
       get "profile", to: "profiles#show"
       get "dashboard", to: "dashboard#show"
       resources :expenses, only: %i[index show create update destroy]
-      resources :categories, only: :index
+      resources :categories, only: %i[index create]
       resources :households, only: %i[index show create]
     end
   end
