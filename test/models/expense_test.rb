@@ -3,7 +3,7 @@ require "test_helper"
 class ExpenseTest < ActiveSupport::TestCase
   setup do
     @user = User.create!(name: "Ana", email: "ana@example.com", password: "clave-segura")
-    @category = Category.create!(name: "Alimentos")
+    @category = Category.create!(name: "Compras")
     @household = Household.create!(name: "Casa")
     @expense = Expense.new(description: "Compra", amount: "123.45", date: Date.new(2026, 9, 16),
       user: @user, category: @category)

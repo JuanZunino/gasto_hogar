@@ -6,6 +6,59 @@ class CategoryTest < ActiveSupport::TestCase
     @other = User.create!(name: "Luis", email: "luis@example.com", password: "clave-segura")
   end
 
+  test "identifies all defaults only for global categories ignoring case and exterior whitespace" do
+    Category::DEFAULT_NAMES.each do |name|
+      assert Category.new(name: " \t#{name.upcase}\n ").default?
+      assert_not Category.new(name: name, user: @user).default?
+    end
+    assert_not Category.new(name: "Viaje").default?
+  end
+
+  test "prevents default renaming including capitalization changes and skipped validations" do
+    category = Category.create!(name: "Alimentos")
+
+    [ "Comida", "ALIMENTOS" ].each do |name|
+      assert_not category.update(name: name)
+      assert category.errors[:name].present?
+      assert_equal "Alimentos", category.reload.name
+      category.name = name
+      assert_not category.save(validate: false)
+      assert_equal "Alimentos", category.reload.name
+    end
+  end
+
+  test "protects existing default variants and allows description changes" do
+    category = Category.create!(name: "alimentos", description: "Original")
+    # Simulate a legacy value without invoking normalization callbacks.
+    category.update_columns(name: " \tALIMENTOS\n ")
+    category.reload
+
+    assert category.default?
+    assert_not category.update(name: "Comida")
+    category.reload
+    # Preserve the legacy name when editing only its description.
+    assert category.update(description: "Actualizada")
+    assert_equal "Actualizada", category.reload.description
+    assert_equal " \tALIMENTOS\n ", category.name
+    category.name = "Comida"
+    assert_no_difference "Category.count" do
+      assert_equal false, category.destroy
+    end
+    assert category.errors[:base].present?
+    assert_raises(ActiveRecord::RecordNotDestroyed) { category.reload.destroy! }
+  end
+
+  test "allows renaming and deleting common global and private categories including private defaults" do
+    [ Category.create!(name: "Viaje"), @user.categories.create!(name: "Alimentos") ].each do |category|
+      assert_not category.default?
+      assert category.update(name: "Excursión", description: "Actualizada")
+      assert_equal "Actualizada", category.reload.description
+      assert_difference "Category.count", -1 do
+        category.destroy!
+      end
+    end
+  end
+
   test "trims exterior spaces preserving readable capitalization" do
     category = Category.create!(name: " \tViaje a Japón\n ", user: @user)
 

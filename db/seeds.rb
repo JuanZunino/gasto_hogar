@@ -1,9 +1,13 @@
-# This file should ensure the existence of records required to run the application in every environment (production,
-# development, test). The code here should be idempotent so that it can be executed at any point in every environment.
-# The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
-#
-# Example:
-#
-#   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
-#     MovieGenre.find_or_create_by!(name: genre_name)
-#   end
+# Hold the catalog lock before checking existence so concurrent writers use the
+# same serialization mechanism as Category saves. A private name conflict raises
+# RecordInvalid and rolls back every category created by this seed run.
+Category.transaction do
+  Category.lock_catalog!
+  Category.uncached do
+    Category::DEFAULT_NAMES.each do |name|
+      next if Category.global.where("#{Category::NORMALIZED_NAME_SQL} = lower(?)", name).exists?
+
+      Category.create!(name: name)
+    end
+  end
+end

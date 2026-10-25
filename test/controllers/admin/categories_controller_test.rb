@@ -3,7 +3,7 @@ require "test_helper"
 class Admin::CategoriesControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in_admin
-    @category = Category.create!(name: "Alimentos", description: "Compras de comida")
+    @category = Category.create!(name: "Compras", description: "Compras de comida")
   end
 
   test "lists categories and action links" do
@@ -100,7 +100,7 @@ class Admin::CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_select "[role='alert'] li", minimum: 1
     assert_select "textarea", text: "Conservar"
-    assert_equal "Alimentos", @category.reload.name
+    assert_equal "Compras", @category.reload.name
     assert_equal "Compras de comida", @category.description
   end
 
