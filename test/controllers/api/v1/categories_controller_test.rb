@@ -81,7 +81,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   test "create returns a private category owned by the authenticated user with the GET JSON contract" do
     assert_no_difference "Category.global.count" do
       assert_difference [ "Category.count", "@user.categories.count" ], 1 do
-        post api_v1_categories_url, params: { name: "Cursos", description: "Formación" }, headers: @headers, as: :json
+        post api_v1_categories_url, params: { category: { name: "Cursos", description: "Formación" } }, headers: @headers, as: :json
       end
     end
 
@@ -105,7 +105,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     [ @other.id, nil ].each_with_index do |owner_id, index|
       assert_no_difference [ "Category.global.count", "@other.categories.count" ] do
         assert_difference "@user.categories.count", 1 do
-          post api_v1_categories_url, params: { name: "Curso #{index}", user_id: owner_id }, headers: @headers, as: :json
+          post api_v1_categories_url, params: { category: { name: "Curso #{index}", user_id: owner_id } }, headers: @headers, as: :json
         end
       end
 
@@ -122,7 +122,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert_no_difference "Category.global.count" do
       assert_difference "@admin.categories.count", 1 do
-        post api_v1_categories_url, params: { name: "Cursos", user_id: nil }, headers: headers, as: :json
+        post api_v1_categories_url, params: { category: { name: "Cursos", user_id: nil } }, headers: headers, as: :json
       end
     end
 
@@ -133,7 +133,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   test "create requires a valid bearer token" do
     [ {}, { "Authorization" => "Bearer invalid" } ].each do |headers|
       assert_no_difference "Category.count" do
-        post api_v1_categories_url, params: { name: "Cursos" }, headers: headers, as: :json
+        post api_v1_categories_url, params: { category: { name: "Cursos" } }, headers: headers, as: :json
       end
 
       assert_response :unauthorized
@@ -143,9 +143,9 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create rejects missing empty and whitespace only names" do
-    [ {}, { name: nil }, { name: "" }, { name: " \t\n " } ].each do |attributes|
+    [ { description: "Sin nombre" }, { name: nil }, { name: "" }, { name: " \t\n " } ].each do |attributes|
       assert_no_difference "Category.count" do
-        post api_v1_categories_url, params: attributes, headers: @headers, as: :json
+        post api_v1_categories_url, params: { category: attributes }, headers: @headers, as: :json
       end
 
       assert_creation_errors
@@ -155,7 +155,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   test "create rejects own duplicates including capitalization and exterior spaces" do
     [ "Viaje a Japón", " \tVIAJE A JAPÓN\n " ].each do |name|
       assert_no_difference "Category.count" do
-        post api_v1_categories_url, params: { name: name }, headers: @headers, as: :json
+        post api_v1_categories_url, params: { category: { name: name } }, headers: @headers, as: :json
       end
 
       assert_creation_errors
@@ -165,7 +165,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
   test "create rejects global collisions including capitalization and exterior spaces" do
     [ "Alimentos", " \tALIMENTOS\n " ].each do |name|
       assert_no_difference "Category.count" do
-        post api_v1_categories_url, params: { name: name }, headers: @headers, as: :json
+        post api_v1_categories_url, params: { category: { name: name } }, headers: @headers, as: :json
       end
 
       assert_creation_errors
@@ -177,7 +177,7 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
       headers = { "Authorization" => "Bearer #{user.signed_id(purpose: :api_v1)}" }
       assert_no_difference "Category.global.count" do
         assert_difference "user.categories.count", 1 do
-          post api_v1_categories_url, params: { name: " \tCursos\n " }, headers: headers, as: :json
+          post api_v1_categories_url, params: { category: { name: " \tCursos\n " } }, headers: headers, as: :json
         end
       end
 
@@ -189,6 +189,18 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_equal 2, ids.uniq.size
+  end
+
+  test "create rejects missing or empty category root and flat JSON with controlled JSON errors" do
+    [ {}, { name: "Cursos", description: "Formato plano" }, { category: nil }, { category: {} } ].each do |attributes|
+      assert_no_difference "Category.count" do
+        post api_v1_categories_url, params: attributes, headers: @headers, as: :json
+      end
+
+      assert_response :bad_request
+      assert_equal "application/json", response.media_type
+      assert_equal({ "errors" => [ "El parámetro category es obligatorio." ] }, response.parsed_body)
+    end
   end
 
   test "category routes expose only index and create" do
