@@ -1,5 +1,9 @@
 <h1 class="h2 mb-4 text-break"><%= @category.name %></h1>
 
+<% if @category.default? %>
+  <p><span class="badge text-bg-secondary">Predeterminada</span> Solo se puede modificar su descripción.</p>
+<% end %>
+
 <div class="card shadow-sm mb-4">
   <div class="card-body p-4">
     <p class="text-break"><strong>Descripción:</strong> <%= @category.description.presence || "Sin descripción" %></p>
@@ -9,6 +13,8 @@
 <div class="d-flex flex-wrap gap-2 mb-4">
   <%= link_to "Editar", edit_admin_category_path(@category), class: "btn btn-outline-primary" %>
   <%= link_to "Volver a categorías", admin_categories_path, class: "btn btn-outline-secondary" %>
-  <%= button_to "Eliminar", admin_category_path(@category), method: :delete, class: "btn btn-outline-danger",
-    form: { class: "m-0", data: { turbo_confirm: "¿Eliminar esta categoría?" } } %>
+  <% unless @category.default? %>
+    <%= button_to "Eliminar", admin_category_path(@category), method: :delete, class: "btn btn-outline-danger",
+      form: { class: "m-0", data: { turbo_confirm: "¿Eliminar esta categoría?" } } %>
+  <% end %>
 </div>

@@ -16,7 +16,12 @@
 
           <div class="mb-3">
             <%= form.label :name, "Nombre", class: "form-label" %>
-            <%= form.text_field :name, required: true, class: "form-control" %>
+            <% if @default_category %>
+              <%= form.text_field :name, value: category.name_in_database, disabled: true, class: "form-control" %>
+              <p class="form-text">Categoría predeterminada: solo se puede modificar su descripción.</p>
+            <% else %>
+              <%= form.text_field :name, required: true, class: "form-control" %>
+            <% end %>
           </div>
           <div class="mb-3">
             <%= form.label :description, "Descripción", class: "form-label" %>

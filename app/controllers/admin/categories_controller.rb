@@ -2,21 +2,21 @@ class Admin::CategoriesController < Admin::BaseController
   before_action :set_category, only: %i[show edit update destroy]
 
   def index
-    @categories = Category.order(:name)
+    @categories = Category.global.order(:name)
   end
 
   def show
   end
 
   def new
-    @category = Category.new
+    @category = Category.global.new
   end
 
   def edit
   end
 
   def create
-    @category = Category.new(category_params)
+    @category = Category.global.new(category_params)
 
     if @category.save
       redirect_to admin_category_path(@category), notice: "Categoría creada correctamente.", status: :see_other
@@ -38,14 +38,16 @@ class Admin::CategoriesController < Admin::BaseController
       redirect_to admin_categories_path, notice: "Categoría eliminada correctamente.", status: :see_other
     else
       redirect_to admin_category_path(@category),
-        alert: "No se pudo eliminar la categoría porque tiene gastos asociados.", status: :see_other
+        alert: @category.default? ? "No se puede eliminar una categoría predeterminada." :
+          "No se pudo eliminar la categoría porque tiene gastos asociados.", status: :see_other
     end
   end
 
   private
 
   def set_category
-    @category = Category.find(params[:id])
+    @category = Category.global.find(params[:id])
+    @default_category = @category.default?
   end
 
   def category_params

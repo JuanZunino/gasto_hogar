@@ -18,14 +18,21 @@
       <tbody>
         <% @categories.each do |category| %>
           <tr>
-            <td><%= category.name %></td>
+            <td>
+              <%= category.name %>
+              <% if category.default? %>
+                <span class="badge text-bg-secondary">Predeterminada</span>
+              <% end %>
+            </td>
             <td><%= category.description %></td>
             <td>
               <div class="d-flex flex-wrap gap-2">
                 <%= link_to "Ver", admin_category_path(category), class: "btn btn-outline-secondary btn-sm" %>
                 <%= link_to "Editar", edit_admin_category_path(category), class: "btn btn-outline-primary btn-sm" %>
-                <%= button_to "Eliminar", admin_category_path(category), method: :delete, class: "btn btn-outline-danger btn-sm",
-                  form: { class: "m-0", data: { turbo_confirm: "¿Eliminar esta categoría?" } } %>
+                <% unless category.default? %>
+                  <%= button_to "Eliminar", admin_category_path(category), method: :delete, class: "btn btn-outline-danger btn-sm",
+                    form: { class: "m-0", data: { turbo_confirm: "¿Eliminar esta categoría?" } } %>
+                <% end %>
               </div>
             </td>
           </tr>

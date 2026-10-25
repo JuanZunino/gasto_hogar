@@ -25,6 +25,24 @@ class Admin::ExpensesControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?] input[name='_method'][value='delete']", admin_expense_path(@expense)
   end
 
+  test "private category names remain visible in expense list details and edit form" do
+    category = @user.categories.create!(name: "Viaje privado")
+    @expense.update!(category: category)
+
+    get admin_expenses_url
+    assert_response :success
+    assert_select "td", text: "Viaje privado"
+
+    get admin_expense_url(@expense)
+    assert_response :success
+    assert_select "p", text: /Categoría: Viaje privado/
+
+    get edit_admin_expense_url(@expense)
+    assert_response :success
+    assert_select "select[name='expense[category_id]'] option[selected][value=?]", category.id.to_s,
+      text: "Viaje privado"
+  end
+
   test "shows an empty list" do
     @expense.destroy!
     get admin_expenses_url
