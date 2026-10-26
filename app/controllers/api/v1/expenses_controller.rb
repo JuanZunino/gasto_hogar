@@ -1,12 +1,22 @@
 class Api::V1::ExpensesController < Api::V1::BaseController
-  before_action :set_expense, only: %i[show update destroy]
+  before_action :set_readable_expense, only: :show
+  before_action :set_writable_expense, only: %i[update destroy]
 
   def index
-    expenses = @current_user.expenses.includes(:category, :household, :receipt_attachment)
+    if params[:household_id].present?
+      household = @current_user.households.find_by(id: params[:household_id])
+      unless household
+        render json: { errors: [ "Hogar no encontrado." ] }, status: :not_found
+        return
+      end
+      expenses = household.expenses
+    else
+      expenses = Expense.visible_to(@current_user).where(user_id: @current_user.id)
+    end
+    expenses = expenses.includes(:user, :category, :household, :receipt_attachment)
     expenses = expenses.where(date: filter_date(:from)..) if params[:from].present?
     expenses = expenses.where(date: ..filter_date(:to)) if params[:to].present?
     expenses = expenses.where(category_id: params[:category_id]) if params[:category_id].present?
-    expenses = expenses.where(household_id: params[:household_id]) if params[:household_id].present?
 
     render json: expenses.order(date: :desc, id: :desc).map { |expense| expense_json(expense) }
   rescue Date::Error, TypeError
@@ -34,8 +44,16 @@ class Api::V1::ExpensesController < Api::V1::BaseController
 
   private
 
-  def set_expense
-    @expense = @current_user.expenses.find_by(id: params[:id])
+  def set_readable_expense
+    @expense = Expense.visible_to(@current_user).find_by(id: params[:id])
+    render json: { errors: [ "Gasto no encontrado." ] }, status: :not_found unless @expense
+  end
+
+  def set_writable_expense
+    owned = @current_user.expenses
+    writable = owned.where(household_id: nil)
+      .or(owned.where(household_id: @current_user.memberships.select(:household_id)))
+    @expense = writable.find_by(id: params[:id])
     render json: { errors: [ "Gasto no encontrado." ] }, status: :not_found unless @expense
   end
 
@@ -59,7 +77,13 @@ class Api::V1::ExpensesController < Api::V1::BaseController
   end
 
   def expense_json(expense)
+    can_write = expense.user_id == @current_user.id &&
+      (expense.household_id.nil? || @current_user.memberships.exists?(household_id: expense.household_id))
+
     expense.as_json(only: %i[id description amount date notes]).merge(
+      "author" => expense.user.as_json(only: %i[id name]),
+      "can_edit" => can_write,
+      "can_delete" => can_write,
       "receipt_attached" => expense.receipt.attached?,
       "category" => expense.category.as_json(only: %i[id name]),
       "household" => expense.household&.as_json(only: %i[id name])

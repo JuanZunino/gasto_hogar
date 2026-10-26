@@ -1,6 +1,15 @@
 class Api::V1::DashboardController < Api::V1::BaseController
   def show
-    expenses = @current_user.expenses
+    if params[:household_id].present?
+      household = @current_user.households.find_by(id: params[:household_id])
+      unless household
+        render json: { errors: [ "Hogar no encontrado." ] }, status: :not_found
+        return
+      end
+      expenses = household.expenses
+    else
+      expenses = Expense.visible_to(@current_user).where(user_id: @current_user.id)
+    end
     expenses = expenses.where(date: Date.iso8601(params[:from])..) if params[:from].present?
     expenses = expenses.where(date: ..Date.iso8601(params[:to])) if params[:to].present?
 

@@ -1,13 +1,13 @@
 # GastoHogar
 
-Aplicación Ruby on Rails para registrar y analizar gastos personales y familiares. Corresponde al **TP N.º 1 de Programación IV** e incluye un back-office administrativo HTML y una API JSON autenticada para usuarios finales.
+GastoHogar es un proyecto académico de **Programación IV**, desarrollado en etapas para registrar y analizar gastos personales y compartidos en hogares. Este repositorio contiene el backend Ruby on Rails, con un back-office administrativo HTML y una API JSON autenticada. El **TP N.º 2** incorpora un frontend Angular en un repositorio independiente; la integración con ese frontend todavía no se considera finalizada.
 
 ## Funcionalidades principales
 
 - Alta y administración de usuarios desde el back-office, con roles `user` y `admin`.
 - Administración de categorías, gastos, hogares y membresías.
 - Gastos personales o asociados a un hogar, con categoría, importe, fecha, descripción y notas opcionales.
-- API para consultar, crear, modificar y eliminar los gastos propios, con filtros combinables.
+- API para administrar gastos propios accesibles y consultar los gastos compartidos de los hogares actuales, con filtros combinables.
 - Consulta del catálogo de categorías y de los hogares a los que pertenece el usuario.
 - Creación de hogares desde la API con una membresía `owner` automática, dentro de una transacción.
 - Dashboard JSON con importe total, cantidad de gastos y totales por categoría.
@@ -30,7 +30,7 @@ Versiones verificadas en `.ruby-version`, `Gemfile.lock` y el entorno local:
 | Active Job | 8.1.3.1, envío diferido de correos |
 | Minitest | 6.0.6 |
 | RuboCop | 1.91.0, configuración `rubocop-rails-omakase` |
-| Brakeman | 8.0.6 |
+| Brakeman | 8.1.0 |
 | Bundler | 4.0.16, según `Gemfile.lock` |
 
 ## Modelo de datos
@@ -38,12 +38,12 @@ Versiones verificadas en `.ruby-version`, `Gemfile.lock` y el entorno local:
 | Modelo | Responsabilidad y relaciones |
 | --- | --- |
 | `User` | Usuario con nombre, email, contraseña almacenada como hash (`has_secure_password`) y rol global `user` o `admin`. Tiene muchos gastos y membresías, y pertenece a hogares a través de sus membresías. |
-| `Category` | Categoría con nombre único y descripción opcional. Tiene muchos gastos. |
+| `Category` | Categoría global (`user_id = NULL`) o privada de un usuario, con nombre obligatorio y descripción opcional. Evita nombres duplicados en el catálogo visible y tiene muchos gastos. |
 | `Expense` | Gasto que pertenece obligatoriamente a un usuario y una categoría. Su hogar es opcional. Tiene descripción, importe positivo, fecha, notas opcionales y un comprobante opcional. |
 | `Household` | Hogar con nombre y descripción opcional. Tiene gastos y membresías; sus usuarios se obtienen a través de las membresías. |
 | `Membership` | Relación entre `User` y `Household`, con rol `owner` o `member`. Cada par usuario/hogar es único. Este rol es independiente del rol global de `User`. |
 
-En `Expense`, `household_id = NULL` representa un gasto personal. Asociar un gasto a un hogar no cambia su propietario: sigue perteneciendo al usuario que lo registró. En la API, compartir hogar no permite consultar gastos ajenos.
+En `Expense`, `household_id = NULL` representa un gasto personal. Asociar un gasto a un hogar no cambia su propietario: sigue perteneciendo al usuario que lo registró. En la API, todos los integrantes actuales pueden consultar los gastos asociados al hogar, incluidos los de otros autores. Solo el autor puede editarlos o eliminarlos mientras conserve su membresía. Al salir del hogar pierde también acceso a los gastos que registró allí; estos permanecen en el historial para los integrantes actuales. Los gastos personales solo son accesibles por su autor.
 
 `Expense` declara `has_one_attached :receipt`: puede tener un único comprobante opcional mediante Active Storage. El archivo se almacena fuera de la tabla `expenses`.
 
@@ -108,7 +108,7 @@ bin/rails db:prepare
 RAILS_ENV=test bin/rails db:prepare
 ```
 
-`db:prepare` crea la base si no existe y prepara el esquema o aplica las migraciones pendientes, incluidas las tablas de Active Storage. `db/seeds.rb` no carga usuarios, categorías ni otros datos iniciales.
+`db:prepare` crea la base si no existe y prepara el esquema o aplica las migraciones pendientes, incluidas las tablas de Active Storage. `db/seeds.rb` crea las diez categorías globales predeterminadas que todavía no existan: Alimentos, Servicios, Transporte, Salud, Educación, Entretenimiento, Hogar, Mascotas, Indumentaria y Otros. Es idempotente: ejecutarlo nuevamente no duplica categorías ni modifica las existentes, comparando nombres sin distinguir mayúsculas ni espacios exteriores. No crea usuarios ni gastos. La operación es transaccional: si una categoría privada impide crear una predeterminada faltante por conflicto de nombre, revierte todas las creaciones de esa ejecución.
 
 Cuando se incorporen nuevas migraciones a una base existente:
 
@@ -132,7 +132,7 @@ Ingresar en `http://localhost:3000/admin/login`. Solamente los usuarios con `rol
 Pantallas disponibles:
 
 - `/admin/users`: alta, consulta, edición y eliminación de usuarios.
-- `/admin/categories`: administración del catálogo de categorías.
+- `/admin/categories`: administración de categorías globales. Las predeterminadas permiten editar su descripción, pero no renombrarlas ni eliminarlas; las privadas quedan fuera de este CRUD.
 - `/admin/expenses`: administración de gastos y carga de comprobantes.
 - `/admin/households`: administración de hogares.
 - `/admin/memberships`: administración de integrantes y sus roles dentro de los hogares.
@@ -166,7 +166,7 @@ No son credenciales preexistentes. La creación desde consola no envía el corre
 
 ## API JSON `/api/v1`
 
-Los cuerpos de creación y actualización se envían como JSON plano, sin envolverlos en una clave `expense` o `household`. Usar `Content-Type: application/json`.
+Los cuerpos de creación y actualización de gastos y creación de hogares se envían como JSON plano, sin envolverlos en una clave `expense` o `household`. La creación de categorías privadas requiere la clave raíz `category`, como se muestra más abajo. Usar `Content-Type: application/json`.
 
 ### Autenticación
 
@@ -201,13 +201,14 @@ Un token ausente, inválido o vencido devuelve `401`. No hay endpoints de regist
 | --- | --- | --- | --- |
 | POST | `/api/v1/login` | Obtener token y datos básicos del usuario. | No |
 | GET | `/api/v1/profile` | Consultar el perfil autenticado. | Sí |
-| GET | `/api/v1/dashboard` | Consultar totales, cantidad y agrupación por categoría de los gastos propios. | Sí |
-| GET | `/api/v1/expenses` | Listar gastos propios con filtros. | Sí |
-| GET | `/api/v1/expenses/:id` | Consultar un gasto propio. | Sí |
+| GET | `/api/v1/dashboard` | Consultar estadísticas propias accesibles; con `household_id`, las del hogar autorizado. | Sí |
+| GET | `/api/v1/expenses` | Listar gastos propios accesibles; con `household_id`, todos los del hogar autorizado. | Sí |
+| GET | `/api/v1/expenses/:id` | Consultar un gasto personal propio o compartido de un hogar actual. | Sí |
 | POST | `/api/v1/expenses` | Crear un gasto para el usuario autenticado. | Sí |
 | PATCH / PUT | `/api/v1/expenses/:id` | Actualizar un gasto propio. | Sí |
 | DELETE | `/api/v1/expenses/:id` | Eliminar un gasto propio. | Sí |
-| GET | `/api/v1/categories` | Consultar el catálogo general, ordenado por nombre ascendente. | Sí |
+| GET | `/api/v1/categories` | Consultar categorías globales y privadas propias, ordenadas por nombre e ID. | Sí |
+| POST | `/api/v1/categories` | Crear una categoría privada del usuario autenticado. | Sí |
 | GET | `/api/v1/households` | Consultar únicamente hogares con membresía del usuario. | Sí |
 | GET | `/api/v1/households/:id` | Consultar un hogar propio y sus integrantes. | Sí |
 | POST | `/api/v1/households` | Crear un hogar y la membresía `owner` del usuario autenticado. | Sí |
@@ -235,7 +236,7 @@ Ejemplo de cuerpo JSON (usar un ID de categoría existente):
 }
 ```
 
-Las respuestas incluyen `id`, `description`, `amount`, `date`, `notes`, `category` con `id` y `name`, `household` con `id` y `name` o `null`, y `receipt_attached` como booleano.
+Las respuestas de gastos agregan `author` (`id`, `name`), `can_edit` y `can_delete` calculados por el backend. Angular puede usar estos booleanos para mostrar acciones, pero el servidor siempre comprueba la autorización. No se aceptan permisos ni autoría enviados por el cliente. Se conservan `id`, `description`, `amount`, `date`, `notes`, `category` con `id` y `name`, `household` con `id` y `name` o `null`, y `receipt_attached` como booleano.
 
 Filtros combinables de `GET /api/v1/expenses`:
 
@@ -244,15 +245,34 @@ Filtros combinables de `GET /api/v1/expenses`:
 | `from` | Fecha del gasto mayor o igual a la indicada. |
 | `to` | Fecha del gasto menor o igual a la indicada. |
 | `category_id` | Gastos de la categoría indicada. |
-| `household_id` | Gastos del hogar indicado, siempre pertenecientes al usuario autenticado. |
+| `household_id` | Todos los gastos del hogar indicado, previa comprobación de membresía actual; hogar ajeno o inexistente devuelve `404`. |
 
 Las fechas se envían como `YYYY-MM-DD`. El orden es fecha descendente y luego ID descendente. Ejemplo: `/api/v1/expenses?from=2026-10-01&to=2026-10-31&category_id=1`.
 
-Las creaciones exitosas devuelven `201`, las consultas/actualizaciones `200` y la eliminación `204` sin cuerpo. Los gastos ajenos o inexistentes devuelven `404`. Los errores de validación devuelven `422` con `errors`; los filtros de fecha inválidos devuelven `400`.
+Las creaciones exitosas devuelven `201`, las consultas/actualizaciones `200` y la eliminación `204` sin cuerpo. Los gastos inaccesibles o inexistentes devuelven `404`; editar o eliminar gastos ajenos también devuelve `404`, aunque puedan consultarse por compartir hogar. Los errores de validación devuelven `422` con `errors`; los filtros de fecha inválidos devuelven `400`.
 
 ### Hogares y categorías
 
-Categories devuelve únicamente `id`, `name` y `description`; su administración continúa en el back-office.
+El nombre de una categoría privada del autor es visible dentro de un gasto compartido y en las estadísticas del hogar. Esto no amplía el catálogo de categorías del lector ni permite asignar categorías privadas ajenas al crear o editar gastos. Las estadísticas agrupan por ID de categoría y nombre, conservando separadas las categorías homónimas.
+
+`GET /api/v1/categories` devuelve únicamente `id`, `name` y `description` de las categorías globales y privadas propias, ordenadas por nombre e ID. Incluso un token de administrador solo ve ese catálogo en la API.
+
+`POST /api/v1/categories` crea una categoría privada para el usuario autenticado. Acepta `name` y `description` dentro de `category`; ignora cualquier `user_id` enviado por el cliente. Ejemplo de cuerpo JSON:
+
+```json
+{
+  "category": {
+    "name": "Cursos",
+    "description": "Formación personal"
+  }
+}
+```
+
+Devuelve `201` con `id`, `name` y `description`; los errores de validación devuelven `422` con `errors`. Una raíz `category` ausente o vacía devuelve `400`. Estos endpoints requieren Bearer token; sin autenticación válida devuelven `401`. No hay endpoints de consulta individual, edición o eliminación de categorías privadas.
+
+Los nombres se recortan y se comparan sin distinguir mayúsculas ni espacios exteriores. Una privada no puede duplicar otra del mismo usuario ni una global; distintos usuarios pueden tener privadas homónimas. Crear o renombrar una global tampoco puede colisionar con privadas existentes. El propietario de una categoría no puede cambiarse. Las categorías con gastos asociados no pueden eliminarse.
+
+Al crear o editar un gasto, la categoría debe ser global o privada del autor del gasto. Compartir hogar no habilita a usar categorías privadas ajenas. El back-office administra únicamente las globales desde `/admin/categories`.
 
 Households index devuelve `id`, `name` y `description`, o un array vacío si no hay membresías. Show agrega `members`: cada integrante tiene `id` del usuario, `name`, `email` y `role` de su `Membership`. Un hogar ajeno o inexistente devuelve `404`.
 
@@ -260,7 +280,7 @@ POST de Households acepta únicamente `name` y `description`. Crea el hogar y la
 
 ### Dashboard
 
-`GET /api/v1/dashboard` admite `from` y `to`, juntos o por separado, con límites inclusivos. Los mismos filtros se aplican a todos los cálculos en PostgreSQL, únicamente sobre los gastos del usuario autenticado, incluso si comparte hogar con otros usuarios.
+`GET /api/v1/dashboard` admite `from` y `to`, juntos o por separado, con límites inclusivos. Los mismos filtros se aplican a todos los cálculos en PostgreSQL. Sin `household_id`, incluye solo gastos propios accesibles: personales y de hogares donde conserva membresía. Excluye gastos ajenos y de hogares abandonados. Con `household_id=ID`, comprueba la membresía actual y calcula sobre todos los gastos del hogar, independientemente de su autor o de que este haya abandonado el hogar; un hogar ajeno o inexistente devuelve `404`. Cada gasto se cuenta una sola vez.
 
 Devuelve:
 
@@ -317,7 +337,9 @@ En tests se utiliza el método `:test`, que acumula correos en memoria sin envia
 bin/rails test
 ```
 
-La suite Minitest incluye modelos, controladores, autenticación, aislamiento de datos por usuario, filtros y agregaciones, adjuntos y correo de bienvenida. Usa una base PostgreSQL de test separada.
+La suite Minitest incluye modelos, controladores, autenticación, aislamiento de datos por usuario, gastos compartidos, filtros y agregaciones, adjuntos, correo de bienvenida y pruebas de seeds y concurrencia. Usa una base PostgreSQL de test separada.
+
+Verificación actual del backend (paso 119.12): **298 tests, 5151 assertions, 0 fallos, 0 errores y 0 omisiones**. Se ejecutaron los 20 archivos de la suite habitual, sin Selenium, mediante un helper externo sobre una instancia PostgreSQL temporal aislada, sin modificar las bases originales. El comando anterior es el habitual de Rails y utiliza la base de test configurada; no reproduce por sí solo ese aislamiento. No se ejecutaron seeds de preparación; `CategorySeedsTest` cargó los seeds únicamente durante sus pruebas.
 
 ## RuboCop
 
@@ -325,7 +347,7 @@ La suite Minitest incluye modelos, controladores, autenticación, aislamiento de
 bin/rubocop
 ```
 
-El proyecto utiliza la configuración de `rubocop-rails-omakase` definida en `.rubocop.yml`.
+El proyecto utiliza la configuración de `rubocop-rails-omakase` definida en `.rubocop.yml`. La verificación actual del backend (paso 119.13) inspeccionó **75 archivos, con 0 infracciones**, sin autocorrecciones.
 
 ## Análisis de seguridad con Brakeman
 
@@ -341,16 +363,9 @@ También puede ejecutarse sin mensajes de progreso:
 bundle exec brakeman --no-pager --quiet
 ```
 
-El análisis revisado actualmente registra **dos warnings de confianza media**, ambos de `Mass Assignment / PermitAttributes`:
+La verificación actual del backend (paso 119.13), con Brakeman **8.1.0**, completó **79 controles, 0 errores y 0 advertencias**, con código de salida `0`. No se agregaron exclusiones para obtener este resultado.
 
-| Archivo | Código señalado | Riesgo potencial |
-| --- | --- | --- |
-| `app/controllers/admin/users_controller.rb` | `params.require(:user).permit(:name, :email, :password, :password_confirmation, :role)` | Asignar privilegios administrativos mediante `role` sin autorización. |
-| `app/controllers/admin/memberships_controller.rb` | `params.require(:membership).permit(:user_id, :household_id, :role)` | Asignar un rol de membresía sin autorización. |
-
-Se revisaron como posibles falsos positivos en el contexto implementado: ambos controladores heredan de `Admin::BaseController`, cuyo filtro exige una sesión de un usuario con rol `admin`. La administración de roles es una función deliberada del back-office. **Los warnings se mantienen visibles; no se agregaron exclusiones ni supresiones.** Brakeman puede finalizar con código distinto de cero por estas advertencias.
-
-`bin/brakeman` agrega `--ensure-latest` y puede detenerse antes de analizar si detecta una versión más nueva. El comando con `bundle exec` permite ejecutar Brakeman 8.0.6 instalado sin actualizar dependencias ni desactivar comprobaciones de seguridad.
+También existe `bin/brakeman`, utilizado en esa verificación. Agrega `--ensure-latest`, que consulta la versión remota y puede impedir el análisis si no puede comprobarla o si detecta una versión más nueva. Los comandos con `bundle exec` ejecutan la versión instalada sin esa comprobación de actualidad ni instalación de dependencias.
 
 ## Estructura
 
@@ -368,4 +383,4 @@ Se revisaron como posibles falsos positivos en el contexto implementado: ambos c
 
 ## Estado del proyecto
 
-Trabajo académico correspondiente al **TP N.º 1 de Programación IV**. El backend, el back-office y los endpoints descritos están implementados. No hay frontend público de usuario final ni dashboard HTML, registro público, recuperación de contraseña o invitaciones a hogares. No se documenta un despliegue público; las instrucciones anteriores corresponden a ejecución local.
+Proyecto académico de Programación IV desarrollado en etapas. El backend Rails, el back-office y los endpoints descritos están implementados y cuentan con la verificación de calidad indicada arriba. El TP2 incorpora un frontend Angular en un repositorio independiente; su integración con el backend permanece pendiente de verificación. Este repositorio no incluye ese frontend, un dashboard HTML, registro público, recuperación de contraseña ni invitaciones a hogares. No se documenta un despliegue público; las instrucciones anteriores corresponden a ejecución local.

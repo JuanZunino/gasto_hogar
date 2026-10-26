@@ -5,6 +5,11 @@ class Expense < ApplicationRecord
   belongs_to :category
   belongs_to :household, optional: true
 
+  scope :visible_to, ->(user) {
+    where(user_id: user.id, household_id: nil)
+      .or(where(household_id: user.memberships.select(:household_id)))
+  }
+
   validates :description, :date, presence: true
   validates :amount, presence: true, numericality: { greater_than: 0 }
   validate :category_is_available_to_user

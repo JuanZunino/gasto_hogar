@@ -62,17 +62,16 @@ class Api::V1::ExpensesControllerTest < ActionDispatch::IntegrationTest
     assert_index_ids({ category_id: @category.id }, [ @shared.id, @personal.id ])
   end
 
-  test "household filter does not expose other members expenses" do
-    assert_index_ids({ household_id: @household.id }, [ @shared.id ])
+  test "household filter includes all members expenses" do
+    assert_index_ids({ household_id: @household.id }, [ @foreign.id, @shared.id ])
   end
 
   test "filters combine including both date boundaries" do
     assert_index_ids({ from: "2026-10-02", to: "2026-10-02", category_id: @category.id,
-      household_id: @household.id }, [ @shared.id ])
+      household_id: @household.id }, [ @foreign.id, @shared.id ])
   end
 
   test "filters without matches return an empty array" do
-    assert_index_ids({ household_id: @other_household.id }, [])
     assert_index_ids({ from: "2026-10-03", to: "2026-10-01" }, [])
   end
 
@@ -95,8 +94,9 @@ class Api::V1::ExpensesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "foreign and nonexistent expenses give identical errors for show update and delete" do
+    inaccessible = @other.expenses.create!(valid_params.merge(household_id: @other_household.id, category: @category))
     [ :get, :patch, :delete ].each do |method|
-      [ @foreign.id, Expense.maximum(:id) + 1 ].each do |id|
+      [ inaccessible.id, Expense.maximum(:id) + 1 ].each do |id|
         assert_no_difference "Expense.count" do
           public_send(method, api_v1_expense_url(id), params: { description: "Changed" }, headers: @headers, as: :json)
         end
@@ -104,7 +104,7 @@ class Api::V1::ExpensesControllerTest < ActionDispatch::IntegrationTest
         assert_equal({ "errors" => [ "Gasto no encontrado." ] }, response.parsed_body)
       end
     end
-    assert_equal "Gasto privado", @foreign.reload.description
+    assert_equal "Supermercado", inaccessible.reload.description
   end
 
   test "admin role cannot access another user's expenses" do
@@ -113,6 +113,15 @@ class Api::V1::ExpensesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ @foreign.id ], response.parsed_body.map { |expense| expense["id"] }
     get api_v1_expense_url(@personal), headers: headers, as: :json
     assert_errors :not_found
+    get api_v1_expense_url(@shared), headers: headers, as: :json
+    assert_response :ok
+    assert_equal false, response.parsed_body["can_edit"]
+    previous = @shared.attributes
+    [ :patch, :delete ].each do |method|
+      public_send(method, api_v1_expense_url(@shared), params: { amount: 1 }, headers: headers, as: :json)
+      assert_errors :not_found
+      assert_equal previous, @shared.reload.attributes
+    end
   end
 
   test "create personal expense assigns token owner and ignores supplied user_id" do
@@ -243,6 +252,109 @@ class Api::V1::ExpensesControllerTest < ActionDispatch::IntegrationTest
     assert_public_expense(response.parsed_body)
   end
 
+  test "shared detail exposes author but never grants another member write access" do
+    get api_v1_expense_url(@foreign), headers: @headers, as: :json
+    assert_response :ok
+    assert_public_expense(response.parsed_body)
+    assert_equal({ "id" => @other.id, "name" => @other.name }, response.parsed_body["author"])
+    assert_equal false, response.parsed_body["can_edit"]
+    assert_equal false, response.parsed_body["can_delete"]
+
+    previous = @foreign.attributes
+    [ :patch, :put, :delete ].each do |method|
+      assert_no_difference "Expense.count" do
+        public_send(method, api_v1_expense_url(@foreign),
+          params: { description: "Changed", user_id: @user.id, can_edit: true, can_delete: true },
+          headers: @headers, as: :json)
+      end
+      assert_errors :not_found
+      assert_equal previous, @foreign.reload.attributes
+    end
+  end
+
+  test "personal expenses remain private even between household members" do
+    personal = @other.expenses.create!(valid_params)
+    [ :get, :patch, :delete ].each do |method|
+      public_send(method, api_v1_expense_url(personal), params: { amount: 1 }, headers: @headers, as: :json)
+      assert_errors :not_found
+    end
+    assert_equal BigDecimal("32500"), personal.reload.amount
+  end
+
+  test "household queries reject outsiders and nonexistent households" do
+    [ @other_household.id, Household.maximum(:id) + 1 ].each do |id|
+      get api_v1_expenses_url, params: { household_id: id }, headers: @headers, as: :json
+      assert_errors :not_found
+    end
+  end
+
+  test "leaving household revokes own and foreign shared access but preserves history" do
+    @user.memberships.find_by!(household: @household).destroy!
+    assert_index_ids({}, [ @latest.id, @personal.id ])
+    get api_v1_expenses_url, params: { household_id: @household.id }, headers: @headers, as: :json
+    assert_errors :not_found
+
+    [ @shared, @foreign ].each do |expense|
+      previous = expense.attributes
+      [ :get, :patch, :delete ].each do |method|
+        assert_no_difference "Expense.count" do
+          public_send(method, api_v1_expense_url(expense), params: { household_id: nil }, headers: @headers, as: :json)
+        end
+        assert_errors :not_found
+        assert_equal previous, expense.reload.attributes
+      end
+    end
+
+    headers = { "Authorization" => "Bearer #{@other.signed_id(purpose: :api_v1)}" }
+    get api_v1_expenses_url, params: { household_id: @household.id }, headers: headers, as: :json
+    assert_response :ok
+    assert_equal [ @foreign.id, @shared.id ], response.parsed_body.map { |expense| expense["id"] }
+    get api_v1_expense_url(@shared), headers: headers, as: :json
+    assert_response :ok
+    assert_equal false, response.parsed_body["can_edit"]
+  end
+
+  test "author can edit and delete own shared expense while still a member" do
+    patch api_v1_expense_url(@shared), params: { notes: "Changed" }, headers: @headers, as: :json
+    assert_response :ok
+    assert_equal true, response.parsed_body["can_edit"]
+    assert_equal "Changed", @shared.reload.notes
+    delete api_v1_expense_url(@shared), headers: @headers, as: :json
+    assert_response :no_content
+    assert_not Expense.exists?(@shared.id)
+  end
+
+  test "shared filters apply to every author and do not include other households" do
+    @other.expenses.create!(valid_params.merge(household_id: @other_household.id))
+    @foreign.update!(category: @second_category)
+    assert_index_ids({ household_id: @household.id, category_id: @category.id }, [ @shared.id ])
+    assert_index_ids({ household_id: @household.id, category_id: @second_category.id,
+      from: "2026-10-02", to: "2026-10-02" }, [ @foreign.id ])
+    assert_index_ids({ household_id: @household.id, to: "2026-10-01" }, [])
+    get api_v1_expenses_url, params: { household_id: @household.id, from: "invalid" }, headers: @headers, as: :json
+    assert_errors :bad_request
+  end
+
+  test "shared private category is readable without expanding catalog or assignment rights" do
+    category = @other.categories.create!(name: "Viaje privado")
+    @foreign.update!(category: category)
+    get api_v1_expense_url(@foreign), headers: @headers, as: :json
+    assert_response :ok
+    assert_equal({ "id" => category.id, "name" => category.name }, response.parsed_body["category"])
+    get api_v1_categories_url, headers: @headers, as: :json
+    assert_not_includes response.parsed_body.map { |item| item["id"] }, category.id
+
+    assert_no_difference "Expense.count" do
+      post api_v1_expenses_url, params: valid_params.merge(household_id: @household.id, category_id: category.id),
+        headers: @headers, as: :json
+    end
+    assert_errors :unprocessable_entity
+    previous = @shared.attributes
+    patch api_v1_expense_url(@shared), params: { category_id: category.id }, headers: @headers, as: :json
+    assert_errors :unprocessable_entity
+    assert_equal previous, @shared.reload.attributes
+  end
+
   private
 
   def valid_params
@@ -258,7 +370,10 @@ class Api::V1::ExpensesControllerTest < ActionDispatch::IntegrationTest
 
   def assert_public_expense(expense)
     assert_equal "application/json", response.media_type
-    assert_equal %w[amount category date description household id notes receipt_attached], expense.keys.sort
+    assert_equal %w[amount author can_delete can_edit category date description household id notes receipt_attached], expense.keys.sort
+    assert_equal %w[id name], expense["author"].keys.sort
+    assert_equal expense["author"]["id"] == @user.id, expense["can_edit"]
+    assert_equal expense["can_edit"], expense["can_delete"]
     assert_includes [ true, false ], expense["receipt_attached"]
     assert_equal %w[id name], expense["category"].keys.sort
     assert_equal %w[id name], expense["household"].keys.sort if expense["household"]

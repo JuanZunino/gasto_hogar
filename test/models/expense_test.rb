@@ -9,6 +9,29 @@ class ExpenseTest < ActiveSupport::TestCase
       user: @user, category: @category)
   end
 
+  test "visible scope uses current membership without duplicate expenses or author exceptions" do
+    other = User.create!(name: "Luis", email: "scope@example.com", password: "clave-segura")
+    Membership.create!(user: @user, household: @household)
+    Membership.create!(user: other, household: @household)
+    personal = @expense.tap(&:save!)
+    shared = @user.expenses.create!(description: "Shared", amount: 10, date: Date.today,
+      category: @category, household: @household)
+    foreign_shared = other.expenses.create!(description: "History", amount: 10, date: Date.today,
+      category: @category, household: @household)
+    other.expenses.create!(description: "Private", amount: 10, date: Date.today, category: @category)
+    outside = Household.create!(name: "Outside")
+    @user.expenses.create!(description: "Former home", amount: 10, date: Date.today,
+      category: @category, household: outside)
+
+    assert_equal [ personal.id, shared.id, foreign_shared.id ].sort, Expense.visible_to(@user).order(:id).pluck(:id)
+    other.memberships.destroy_all
+    assert_includes Expense.visible_to(@user), foreign_shared
+    @user.memberships.destroy_all
+    assert_equal [ personal.id ], Expense.visible_to(@user).pluck(:id)
+    assert Expense.exists?(shared.id)
+    assert Expense.exists?(foreign_shared.id)
+  end
+
   test "persists a personal expense without a household" do
     @expense.save!
 

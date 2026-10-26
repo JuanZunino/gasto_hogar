@@ -96,6 +96,76 @@ class Api::V1::DashboardControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "household dashboard includes all authors once and excludes personal and other household expenses" do
+    outside = Household.create!(name: "Outside")
+    expense(@other, @food, "9999.00", "2026-10-01", outside)
+    expense(@user, @food, "20.20", "2026-10-01", @household)
+    get api_v1_dashboard_url, params: { household_id: @household.id }, headers: @headers, as: :json
+    assert_dashboard "1040.40", 3, [ category_total(@food, "1040.40") ]
+  end
+
+  test "household dates are inclusive and apply to all calculations" do
+    expense(@other, @services, "5.00", "2026-10-02", @household)
+    [ { from: "2026-10-01", to: "2026-10-01" }, { to: "2026-10-01" } ].each do |filters|
+      get api_v1_dashboard_url, params: filters.merge(household_id: @household.id), headers: @headers, as: :json
+      assert_dashboard "1020.20", 2, [ category_total(@food, "1020.20") ]
+    end
+    get api_v1_dashboard_url, params: { household_id: @household.id, from: "2026-10-02" }, headers: @headers, as: :json
+    assert_dashboard "5.00", 1, [ category_total(@services, "5.00") ]
+    get api_v1_dashboard_url, params: { household_id: @household.id, from: "2027-01-01" }, headers: @headers, as: :json
+    assert_dashboard "0.00", 0, []
+    get api_v1_dashboard_url, params: { household_id: @household.id, from: "invalid" }, headers: @headers, as: :json
+    assert_response :bad_request
+    assert response.parsed_body["errors"].present?
+  end
+
+  test "leaving household removes own shared amounts and revokes joint dashboard without deleting history" do
+    @user.memberships.find_by!(household: @household).destroy!
+    get api_v1_dashboard_url, headers: @headers, as: :json
+    assert_dashboard "181.00", 4, [ category_total(@services, "80.00"),
+      category_total(@transport, "60.60"), category_total(@food, "40.40") ]
+    get api_v1_dashboard_url, params: { household_id: @household.id }, headers: @headers, as: :json
+    assert_response :not_found
+    assert_equal({ "errors" => [ "Hogar no encontrado." ] }, response.parsed_body)
+
+    headers = { "Authorization" => "Bearer #{@other.signed_id(purpose: :api_v1)}" }
+    get api_v1_dashboard_url, params: { household_id: @household.id }, headers: headers, as: :json
+    assert_dashboard "1020.20", 2, [ category_total(@food, "1020.20") ]
+  end
+
+  test "global administrator cannot request outsider or nonexistent household statistics" do
+    @user.update!(role: "admin")
+    outside = Household.create!(name: "Outside")
+    [ outside.id, Household.maximum(:id) + 1 ].each do |id|
+      get api_v1_dashboard_url, params: { household_id: id }, headers: @headers, as: :json
+      assert_response :not_found
+      assert_equal({ "errors" => [ "Hogar no encontrado." ] }, response.parsed_body)
+    end
+  end
+
+  test "member without own expenses can see household statistics and an empty home returns zeros" do
+    member = User.create!(name: "Member", email: "member-dashboard@example.com", password: "clave-segura")
+    Membership.create!(user: member, household: @household)
+    headers = { "Authorization" => "Bearer #{member.signed_id(purpose: :api_v1)}" }
+    get api_v1_dashboard_url, params: { household_id: @household.id }, headers: headers, as: :json
+    assert_dashboard "1020.20", 2, [ category_total(@food, "1020.20") ]
+    empty = Household.create!(name: "Empty")
+    Membership.create!(user: member, household: empty)
+    get api_v1_dashboard_url, params: { household_id: empty.id }, headers: headers, as: :json
+    assert_dashboard "0.00", 0, []
+  end
+
+  test "household groups homonymous private categories by id without exposing private catalogs" do
+    first = @user.categories.create!(name: "Especial")
+    second = @other.categories.create!(name: "Especial")
+    expense(@user, first, "7.00", "2026-10-03", @household)
+    expense(@other, second, "7.00", "2026-10-03", @household)
+    get api_v1_dashboard_url, params: { household_id: @household.id, from: "2026-10-03" }, headers: @headers, as: :json
+    assert_dashboard "14.00", 2, [ category_total(first, "7.00"), category_total(second, "7.00") ]
+    get api_v1_categories_url, headers: @headers, as: :json
+    assert_not_includes response.parsed_body.map { |category| category["id"] }, second.id
+  end
+
   private
 
   def expense(user, category, amount, date, household = nil)
