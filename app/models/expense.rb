@@ -12,6 +12,10 @@ class Expense < ApplicationRecord
 
   validates :description, :date, presence: true
   validates :amount, presence: true, numericality: { greater_than: 0 }
+  validates :amount, numericality: {
+    less_than_or_equal_to: BigDecimal("9999999999.99"),
+    message: "no puede superar $9.999.999.999,99"
+  }, allow_blank: true
   validate :category_is_available_to_user
 
   private

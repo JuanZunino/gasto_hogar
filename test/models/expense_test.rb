@@ -151,6 +151,28 @@ class ExpenseTest < ActiveSupport::TestCase
     end
   end
 
+  test "enforces the maximum on creation and update for personal and shared expenses" do
+    [ nil, @household ].each do |household|
+      expense = @expense.dup
+      expense.household = household
+      expense.amount = "10000000000.00"
+      assert_not expense.save
+      assert expense.errors.of_kind?(:amount, :less_than_or_equal_to)
+      assert_includes expense.errors[:amount], "no puede superar $9.999.999.999,99"
+
+      expense.amount = "9999999999.99"
+      assert expense.save
+      assert_equal BigDecimal("9999999999.99"), expense.reload.amount
+
+      [ "0", "-0.01", "10000000000.00" ].each do |amount|
+        assert_not expense.update(amount: amount)
+        assert_equal BigDecimal("9999999999.99"), expense.reload.amount
+      end
+      assert expense.update(amount: "123.45")
+      assert_equal BigDecimal("123.45"), expense.reload.amount
+    end
+  end
+
   test "requires a date" do
     @expense.date = nil
 
