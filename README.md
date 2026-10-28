@@ -1,6 +1,6 @@
 # GastoHogar
 
-GastoHogar es un proyecto académico de **Programación IV**, desarrollado en etapas para registrar y analizar gastos personales y compartidos en hogares. Este repositorio contiene el backend Ruby on Rails, con un back-office administrativo HTML y una API JSON autenticada. El **TP N.º 2** incorpora un frontend Angular en un repositorio independiente; la integración con ese frontend todavía no se considera finalizada.
+GastoHogar es un proyecto académico de **Programación IV**, desarrollado en etapas para registrar y analizar gastos personales y compartidos en hogares. Este repositorio contiene el backend Ruby on Rails, con un back-office administrativo HTML y una API JSON autenticada. El **TP1** comprende el backend y el back-office; el **TP2** incorpora el [frontend Angular](https://github.com/JuanZunino/gasto_hogar_frontend) en un repositorio independiente, que consume esta API para autenticación, gastos, categorías y dashboard personal o por hogar. La integración está implementada; esta revisión documental no certifica una ejecución conjunta.
 
 ## Funcionalidades principales
 
@@ -17,13 +17,13 @@ GastoHogar es un proyecto académico de **Programación IV**, desarrollado en et
 
 ## Tecnologías
 
-Versiones verificadas en `.ruby-version`, `Gemfile.lock` y el entorno local:
+Versiones declaradas en `.ruby-version` y `Gemfile.lock` (sin consultar servicios locales):
 
 | Tecnología | Versión / uso |
 | --- | --- |
 | Ruby | 4.0.6 |
 | Ruby on Rails | 8.1.3.1 |
-| PostgreSQL | 16.15 en el entorno verificado; el repositorio no fija una versión del servidor |
+| PostgreSQL | Servidor requerido; el repositorio no fija su versión |
 | Active Record | 8.1.3.1, modelos, relaciones y consultas SQL |
 | Active Storage | 8.1.3.1, archivos adjuntos |
 | Action Mailer | 8.1.3.1, emails con vistas HTML y texto |
@@ -37,7 +37,7 @@ Versiones verificadas en `.ruby-version`, `Gemfile.lock` y el entorno local:
 
 | Modelo | Responsabilidad y relaciones |
 | --- | --- |
-| `User` | Usuario con nombre, email, contraseña almacenada como hash (`has_secure_password`) y rol global `user` o `admin`. Tiene muchos gastos y membresías, y pertenece a hogares a través de sus membresías. |
+| `User` | Usuario con nombre, email, contraseña almacenada como hash (`has_secure_password`) y rol global `user` o `admin`. Tiene muchos gastos, categorías privadas y membresías, y pertenece a hogares a través de sus membresías. |
 | `Category` | Categoría global (`user_id = NULL`) o privada de un usuario, con nombre obligatorio y descripción opcional. Evita nombres duplicados en el catálogo visible y tiene muchos gastos. |
 | `Expense` | Gasto que pertenece obligatoriamente a un usuario y una categoría. Su hogar es opcional. Tiene descripción, importe positivo, fecha, notas opcionales y un comprobante opcional. |
 | `Household` | Hogar con nombre y descripción opcional. Tiene gastos y membresías; sus usuarios se obtienen a través de las membresías. |
@@ -47,32 +47,29 @@ En `Expense`, `household_id = NULL` representa un gasto personal. Asociar un gas
 
 `Expense` declara `has_one_attached :receipt`: puede tener un único comprobante opcional mediante Active Storage. El archivo se almacena fuera de la tabla `expenses`.
 
-## Instalación y ejecución local
+## Instalación y ejecución conjunta (TP1 y TP2)
 
-Los comandos de Rails deben ejecutarse desde el directorio que contiene `Gemfile` y `bin/rails`.
+Angular se ejecuta en el navegador y solicita JSON a Rails; Rails autentica, autoriza y persiste mediante Active Record en PostgreSQL. El back-office HTML se sirve directamente desde Rails. Angular no se conecta a PostgreSQL.
 
-### 1. Clonar el repositorio
+Los siguientes comandos son instrucciones para una instalación futura: **no se ejecutaron en el Paso 120.18**. Usar una instancia PostgreSQL local nueva, aislada y descartable, con un rol autorizado para crear bases. No usar bases protegidas ni de otras evaluaciones. Los nombres de ejemplo siguientes deben estar libres; si ya existen, elegir otros antes de continuar. No se requiere consultar ni copiar datos existentes.
 
-No hay un remoto Git configurado en la copia inspeccionada. **Reemplazar `https://github.com/JuanZunino/gasto_hogar.git` por la URL real antes de ejecutar:**
+### 1. Obtener ambos proyectos
+
+Desde un directorio de trabajo elegido:
 
 ```bash
-git clone https://github.com/JuanZunino/gasto_hogar.git gasto_hogar
+git clone https://github.com/JuanZunino/gasto_hogar.git
+git clone https://github.com/JuanZunino/gasto_hogar_frontend.git
 cd gasto_hogar
 ```
 
-### 2. Preparar Ruby y dependencias
+Las URLs corresponden a los remotos `origin` de las copias inspeccionadas; su disponibilidad y permisos remotos no se comprobaron. Si ya se tienen ambos proyectos, usar esas copias.
 
-Instalar Ruby **4.0.6** con el gestor de versiones preferido. También se necesita PostgreSQL en ejecución y herramientas de compilación para las dependencias nativas.
+### 2. Dependencias
 
-Ejemplo de paquetes de sistema para Ubuntu/Debian:
+Instalar Ruby **4.0.6**, Bundler **4.0.16**, PostgreSQL y las herramientas de compilación y cabeceras de libpq que necesita la gema `pg`. Para procesamiento de imágenes, la aplicación incluye `image_processing`; el CI instala libvips. No se fija una versión de PostgreSQL ni un instalador del sistema operativo.
 
-```bash
-sudo apt update
-sudo apt install build-essential libpq-dev postgresql postgresql-contrib
-sudo service postgresql start
-```
-
-Con la versión correcta de Ruby activa:
+Desde la raíz del backend:
 
 ```bash
 ruby -v
@@ -80,50 +77,69 @@ gem install bundler -v 4.0.16
 bundle install
 ```
 
-### 3. Preparar PostgreSQL
-
-`config/database.yml` usa PostgreSQL por conexión local, sin usuario ni contraseña explícitos para development/test. Por defecto, el rol de PostgreSQL debe coincidir con el usuario del sistema operativo y poder crear bases de datos.
-
-En Ubuntu/Debian, si ese rol todavía no existe:
+Para Angular se requieren Node compatible con `^22.22.3 || ^24.15.0 || >=26.0.0` y npm **11.19.1**, según el lockfile y `packageManager` del frontend. En otra terminal:
 
 ```bash
-sudo -u postgres createuser --createdb "$(whoami)"
+cd ../gasto_hogar_frontend
+npm ci
 ```
 
-Comprobar la conexión:
+El `cd` anterior parte del backend; cada terminal debe situarse en la raíz del proyecto correspondiente. No hace falta instalar Angular CLI globalmente.
+
+### 3. Preparar bases nuevas de demostración y test
+
+`config/database.yml` declara `gasto_hogar_development` y `gasto_hogar_test`. Para evitar esas bases, esta guía las sustituye por `DATABASE_URL`, mecanismo previsto en ese archivo. En una terminal del backend, con acceso local ya preparado a la instancia descartable:
 
 ```bash
-psql -d postgres -c 'SELECT current_user;'
+export RAILS_ENV=development
+export DATABASE_URL=postgresql:///gasto_hogar_demo_12018
+bin/rails db:create db:migrate db:seed
 ```
 
-Si se usa otro servidor o autenticación por contraseña, configurar los valores locales de conexión en `config/database.yml` o las variables de conexión de PostgreSQL (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`). No publicar credenciales en Git. Development y test deben usar bases separadas:
+La URL no contiene credenciales. Usa la conexión local y el rol predeterminado del sistema; si el entorno requiere otro host/rol, preparar la conexión local de forma privada antes de ejecutar. No guardar secretos en el README ni en Git.
 
-- `gasto_hogar_development`
-- `gasto_hogar_test`
+Los comandos crean una base nueva y aplican las migraciones, incluidas las tablas de Active Storage. `db/seeds.rb` crea únicamente las diez categorías globales faltantes: Alimentos, Servicios, Transporte, Salud, Educación, Entretenimiento, Hogar, Mascotas, Indumentaria y Otros. Es idempotente y transaccional; no crea usuarios, hogares ni gastos. Un conflicto con una categoría privada revierte esa ejecución.
 
-### 4. Preparar las bases de datos
+La base de tests se prepara por separado, en otra terminal del backend:
 
 ```bash
-bin/rails db:prepare
-RAILS_ENV=test bin/rails db:prepare
+export RAILS_ENV=test
+export DATABASE_URL=postgresql:///gasto_hogar_test_demo_12018
+bin/rails db:create db:migrate
 ```
 
-`db:prepare` crea la base si no existe y prepara el esquema o aplica las migraciones pendientes, incluidas las tablas de Active Storage. `db/seeds.rb` crea las diez categorías globales predeterminadas que todavía no existan: Alimentos, Servicios, Transporte, Salud, Educación, Entretenimiento, Hogar, Mascotas, Indumentaria y Otros. Es idempotente: ejecutarlo nuevamente no duplica categorías ni modifica las existentes, comparando nombres sin distinguir mayúsculas ni espacios exteriores. No crea usuarios ni gastos. La operación es transaccional: si una categoría privada impide crear una predeterminada faltante por conflicto de nombre, revierte todas las creaciones de esa ejecución.
+El helper de tests configura ejecución paralela según los procesadores y puede crear bases derivadas para sus workers. Toda esa ejecución debe permanecer en la instancia descartable. Nunca asignar la misma URL a demostración y tests.
 
-Cuando se incorporen nuevas migraciones a una base existente:
+### 4. Usuarios y datos de demostración
+
+Conservar `RAILS_ENV=development` y `DATABASE_URL` de la base nueva al abrir la consola para crear el administrador inicial (procedimiento abajo). Después iniciar Rails e ingresar al back-office:
+
+1. En `/admin/users/new`, crear dos usuarios finales con rol `user`, emails distintos elegidos por el evaluador y contraseñas nuevas introducidas en el formulario. No hay credenciales predefinidas ni registro público. Esto también permite demostrar el correo de bienvenida.
+2. En `/admin/households/new`, crear un hogar de demostración.
+3. En `/admin/memberships/new`, asociar ambos usuarios al mismo hogar, uno como `owner` y otro como `member`. Estos roles no conceden acceso administrativo.
+4. Registrar gastos desde Angular con cada usuario: al menos uno personal y otro del hogar. Usar las categorías sembradas o crear una privada desde el formulario Angular.
+
+### 5. Iniciar ambos servidores
+
+Terminal del backend, manteniendo la base de demostración:
 
 ```bash
-bin/rails db:migrate
-RAILS_ENV=test bin/rails db:prepare
+export RAILS_ENV=development
+export DATABASE_URL=postgresql:///gasto_hogar_demo_12018
+bin/rails server -p 3000
 ```
 
-### 5. Iniciar Rails
+Terminal del frontend, desde `gasto_hogar_frontend`:
 
 ```bash
-bin/rails server
+npm start
 ```
 
-El servidor local está disponible en `http://localhost:3000`. Abrir `/admin/login`; no hay una página de inicio definida para `/`. `bin/dev` también inicia el servidor Rails.
+- Back-office: `http://localhost:3000/admin/login`.
+- Frontend: `http://localhost:4200/login`.
+- API: `http://localhost:3000/api/v1` más los endpoints documentados abajo; no hay una página índice en esa ruta ni en `/` de Rails.
+
+`angular.json` carga `proxy.conf.json`: `/api/v1/**` se reenvía a `http://localhost:3000`. Los servicios Angular usan URLs relativas. El proxy de desarrollo permite trabajar sin configurar CORS. El build estático necesita un servidor que resuelva las rutas de la SPA y reenvíe la API; esta guía cubre desarrollo local, no un despliegue de producción.
 
 ## Back-office administrativo
 
@@ -141,7 +157,7 @@ La eliminación de usuarios, categorías y hogares con gastos asociados está re
 
 ### Crear el administrador inicial
 
-Ejecutar:
+Desde el backend y con las variables de la base aislada de demostración del paso 3, ejecutar:
 
 ```bash
 bin/rails console
@@ -309,7 +325,7 @@ curl -i -G http://localhost:3000/api/v1/dashboard \
 
 ## Comprobantes con Active Storage
 
-En `/admin/expenses`, crear o editar un gasto y seleccionar una imagen o PDF en **Comprobante (opcional)**. Guardar y abrir el detalle para descargar el archivo mediante el enlace de Active Storage. Seleccionar otro archivo reemplaza el anterior; editar sin elegir uno nuevo conserva el existente.
+En `/admin/expenses`, crear o editar un gasto y seleccionar una imagen o PDF en **Comprobante (opcional)**. Guardar y abrir el detalle para descargar el archivo mediante el enlace de Active Storage. El selector ofrece imágenes y PDF; el modelo no impone validaciones de tipo ni tamaño. Seleccionar otro archivo reemplaza el anterior; editar sin elegir uno nuevo conserva el existente.
 
 La configuración utiliza almacenamiento local: `storage/` en development y `tmp/storage/` en tests. PostgreSQL contiene metadatos y relaciones en las tablas de Active Storage, no el contenido del archivo.
 
@@ -331,41 +347,54 @@ Para probarlo:
 
 En tests se utiliza el método `:test`, que acumula correos en memoria sin enviarlos a Internet.
 
-## Tests
+## Pruebas y controles de calidad
+
+Desde el backend, después de preparar la base de tests aislada descrita arriba, conservar sus variables en esa terminal:
 
 ```bash
+export RAILS_ENV=test
+export DATABASE_URL=postgresql:///gasto_hogar_test_demo_12018
 bin/rails test
+bin/rails test:system
 ```
 
-La suite Minitest incluye modelos, controladores, autenticación, aislamiento de datos por usuario, gastos compartidos, filtros y agregaciones, adjuntos, correo de bienvenida y pruebas de seeds y concurrencia. Usa una base PostgreSQL de test separada.
+Minitest cubre modelos, controladores administrativos/API, autenticación, permisos, hogares compartidos, filtros, dashboard, adjuntos, correos, seeds y concurrencia. `test/test_helper.rb` carga fixtures y habilita paralelismo. `CategoryConcurrencyTest` utiliza conexiones independientes y registros confirmados, sin transacciones de fixtures; `CategorySeedsTest` ejecuta los seeds durante sus pruebas. Requieren PostgreSQL real y descartable.
 
-Verificación actual del backend (paso 119.12): **298 tests, 5151 assertions, 0 fallos, 0 errores y 0 omisiones**. Se ejecutaron los 20 archivos de la suite habitual, sin Selenium, mediante un helper externo sobre una instancia PostgreSQL temporal aislada, sin modificar las bases originales. El comando anterior es el habitual de Rails y utiliza la base de test configurada; no reproduce por sí solo ese aislamiento. No se ejecutaron seeds de preparación; `CategorySeedsTest` cargó los seeds únicamente durante sus pruebas.
+`bin/rails test` no incluye los tests de sistema: `test:system` usa Selenium con Chrome headless según `test/application_system_test_case.rb` y requiere navegador/driver disponibles. Ejecutar solo un archivo o excluir sistema, concurrencia o seeds es una **ejecución parcial**: informar comando exacto, archivos excluidos y motivo.
 
-## RuboCop
+El README anterior citaba una ejecución histórica del paso 119.12 mediante un helper externo que excluía Selenium. Ese helper no está en el repositorio y sus cifras no acreditan el estado actual ni una ejecución completa. No se encontraron exclusiones explícitas adicionales en los tests inspeccionados; no se dispone aquí del comando de auditoría del Paso 120.17 para certificar sus exclusiones. En el Paso 120.18 no se ejecutó ninguna prueba ni control de calidad; no se publica un resultado vigente de aprobación.
+
+Controles disponibles, desde la raíz del backend:
 
 ```bash
 bin/rubocop
-```
-
-El proyecto utiliza la configuración de `rubocop-rails-omakase` definida en `.rubocop.yml`. La verificación actual del backend (paso 119.13) inspeccionó **75 archivos, con 0 infracciones**, sin autocorrecciones.
-
-## Análisis de seguridad con Brakeman
-
-Ejecutar la versión instalada mediante Bundler:
-
-```bash
 bundle exec brakeman --no-pager
+bin/bundler-audit
+bin/importmap audit
 ```
 
-También puede ejecutarse sin mensajes de progreso:
+RuboCop usa `rubocop-rails-omakase`. Brakeman ejecutado con Bundler usa la versión instalada; `bin/brakeman` añade `--ensure-latest` y puede necesitar acceso remoto o fallar por versión desactualizada. Las auditorías de dependencias también pueden necesitar red.
+
+`config/ci.rb` y `.github/workflows/ci.yml` describen los controles automatizados. `bin/ci` también ejecuta setup y `db:seed:replant`; no es una comprobación meramente documental y no debe apuntar a datos que se quieran conservar. El workflow incluye jobs separados para tests Rails y sistema; en `config/ci.rb` el paso de sistema está comentado.
+
+Para el frontend, desde su raíz:
 
 ```bash
-bundle exec brakeman --no-pager --quiet
+npm test -- --watch=false
+npm run build
 ```
 
-La verificación actual del backend (paso 119.13), con Brakeman **8.1.0**, completó **79 controles, 0 errores y 0 advertencias**, con código de salida `0`. No se agregaron exclusiones para obtener este resultado.
+Consultar su [README](https://github.com/JuanZunino/gasto_hogar_frontend#readme) para alcance y validación manual.
 
-También existe `bin/brakeman`, utilizado en esa verificación. Agrega `--ensure-latest`, que consulta la versión remota y puede impedir el análisis si no puede comprobarla o si detecta una versión más nueva. Los comandos con `bundle exec` ejecutan la versión instalada sin esa comprobación de actualidad ni instalación de dependencias.
+## Recorrido de evaluación conjunta
+
+1. Iniciar sesión administrativa y mostrar usuarios, categorías globales, hogares y membresías.
+2. Crear un usuario y comprobar el archivo de bienvenida en `tmp/mails` o la vista previa del mailer.
+3. Crear/editar un gasto en el back-office con comprobante y descargarlo desde el detalle.
+4. Ingresar con un usuario final en Angular: mostrar perfil, crear, listar, filtrar, editar y eliminar gastos propios; crear una categoría privada desde el formulario.
+5. Filtrar por el hogar compartido: mostrar gastos de ambos autores y acciones de edición/eliminación solo sobre los propios. Cambiar de usuario cerrando sesión y demostrar el aislamiento de gastos personales.
+6. Abrir el dashboard, alternar Mis gastos/hogar y aplicar un período; comparar total, cantidad y categorías con los gastos correspondientes. Mostrar barras, dona y estado sin resultados.
+7. Cerrar sesión y comprobar que las rutas Angular protegidas solicitan autenticación. Los permisos definitivos se aplican en Rails.
 
 ## Estructura
 
@@ -381,6 +410,8 @@ También existe `bin/brakeman`, utilizado en esa verificación. Agrega `--ensure
 - `db/migrate/`: migraciones del modelo de datos y Active Storage.
 - `test/`: tests y vista previa del correo.
 
-## Estado del proyecto
+## Alcance y verificación documental
 
-Proyecto académico de Programación IV desarrollado en etapas. El backend Rails, el back-office y los endpoints descritos están implementados y cuentan con la verificación de calidad indicada arriba. El TP2 incorpora un frontend Angular en un repositorio independiente; su integración con el backend permanece pendiente de verificación. Este repositorio no incluye ese frontend, un dashboard HTML, registro público, recuperación de contraseña ni invitaciones a hogares. No se documenta un despliegue público; las instrucciones anteriores corresponden a ejecución local.
+El backend y el frontend Angular implementan los flujos descritos de TP1/TP2. Angular no ofrece una pantalla de gestión de hogares/membresías: estos se preparan en el back-office; la API también permite crear hogares con membresía `owner`. No hay registro público, recuperación de contraseña ni invitaciones a hogares. El dashboard visual pertenece a Angular, no al back-office.
+
+Esta documentación se contrastó con rutas, modelos, controladores, vistas, configuración, manifests, lockfiles y tests de ambos repositorios. Los comandos de instalación, conexión, preparación de bases, servidores y pruebas se documentan para su ejecución posterior: no se instalaron dependencias ni se arrancaron servicios durante esta revisión. La compatibilidad efectiva del entorno, disponibilidad remota y funcionamiento de extremo a extremo quedan pendientes de ejecución por el evaluador en el entorno aislado.
